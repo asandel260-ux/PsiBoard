@@ -20,11 +20,13 @@ import kotlin.math.min
 /** Snapshot of every visual setting, pre-scaled to pixels. Rebuilt whenever a setting changes. */
 class Theme(ctx: Context) {
     private val d = ctx.resources.displayMetrics.density
+    val dens = d
     private val sd = ctx.resources.displayMetrics.scaledDensity
     private fun dp(k: String) = Settings.int(k) * d
     private fun sp(k: String) = Settings.int(k) * sd
     private fun a(color: Int, pct: Int) = Color.argb((Color.alpha(color) * pct / 100f).toInt(), Color.red(color), Color.green(color), Color.blue(color))
 
+    val highlight = Settings.int("key_highlight")
     val keyOp = Settings.int("key_opacity")
     val bg = a(Settings.int("c_bg"), Settings.int("kb_opacity"))
     val bg2 = a(Settings.int("c_bg2"), Settings.int("kb_opacity"))
@@ -142,6 +144,8 @@ class KeyboardView(ctx: Context) : View(ctx) {
     var shift = 0 // 0 off, 1 once, 2 caps lock
         set(v) { field = v; invalidate() }
     var spaceLabel = ""
+    var symLabel = "?123"
+    var abcLabel = "ABC"
     var enterLabel: String? = null
     var isLandscape = false
 
@@ -209,46 +213,65 @@ class KeyboardView(ctx: Context) : View(ctx) {
         for (k in allKeys) drawKey(c, k)
     }
 
+    private val rect2 = RectF()
+    private fun mix(a: Int, b: Int, f: Float) = Color.argb(
+        (Color.alpha(a) + (Color.alpha(b) - Color.alpha(a)) * f).toInt(), (Color.red(a) + (Color.red(b) - Color.red(a)) * f).toInt(),
+        (Color.green(a) + (Color.green(b) - Color.green(a)) * f).toInt(), (Color.blue(a) + (Color.blue(b) - Color.blue(a)) * f).toInt())
+
     private fun drawKey(c: Canvas, k: Key) {
         val t = th
         rect.set(k.x + t.gapH / 2, k.y + t.gapV / 2, k.x + k.w - t.gapH / 2, k.y + k.h - t.gapV / 2)
+        val minSide = min(rect.width(), rect.height())
+        val rad = min(t.radius, minSide * 0.34f)
         val enter = k.token == "{enter}"
-        if (t.shadowOff > 0) {
-            paint.color = t.shadow; paint.style = Paint.Style.FILL
-            rect.offset(0f, t.shadowOff); c.drawRoundRect(rect, t.radius, t.radius, paint); rect.offset(0f, -t.shadowOff)
+        if (t.shadowOff > 0 && !k.pressed) {
+            paint.style = Paint.Style.FILL; paint.color = t.shadow
+            rect.offset(0f, t.shadowOff); c.drawRoundRect(rect, rad, rad, paint); rect.offset(0f, -t.shadowOff)
         }
         paint.style = Paint.Style.FILL
         paint.color = when {
+            k.pressed && enter -> mix(t.accent, Color.BLACK, 0.25f)
             k.pressed -> if (k.special) t.specialP else t.keyP
             enter -> t.accent
             k.special -> t.special
             else -> t.key
         }
-        c.drawRoundRect(rect, t.radius, t.radius, paint)
+        c.drawRoundRect(rect, rad, rad, paint)
+        if (t.highlight > 0 && !k.pressed) {
+            // thin light edge along the top of the key = tactile depth
+            val hw = 1.2f * t.dens
+            c.save(); c.clipRect(rect.left, rect.top, rect.right, rect.top + rad * 0.9f + hw)
+            rect2.set(rect); rect2.inset(hw / 2, hw / 2)
+            paint.style = Paint.Style.STROKE; paint.strokeWidth = hw; paint.color = Color.argb((t.highlight * 0.45f * 2.55f).toInt().coerceIn(0, 255), 255, 255, 255)
+            c.drawRoundRect(rect2, rad, rad, paint); c.restore()
+        }
         if (t.borderW > 0 && Color.alpha(t.border) > 0) {
             paint.style = Paint.Style.STROKE; paint.strokeWidth = t.borderW; paint.color = t.border
-            c.drawRoundRect(rect, t.radius, t.radius, paint)
+            c.drawRoundRect(rect, rad, rad, paint)
         }
         val cx = rect.centerX(); val cy = rect.centerY()
         val fg = if (enter) t.textAccent else if (k.special) t.textSpecial else t.text
         paint.style = Paint.Style.FILL; paint.color = fg; paint.typeface = t.typeface; paint.textAlign = Paint.Align.CENTER
-        ip.color = fg; ip.strokeWidth = max(2f, rect.height() * 0.045f); ip.style = Paint.Style.STROKE
-        val s = min(rect.width(), rect.height()) * 0.2f
+        ip.color = fg; ip.strokeWidth = max(2f, minSide * 0.055f)
+        val s = minSide * 0.2f
         when (k.token) {
-            "{shift}" -> drawShift(c, cx, cy, s)
-            "{del}" -> drawDel(c, cx, cy, s)
-            "{enter}" -> if (enterLabel != null) label(c, enterLabel!!, cx, cy, t.specialSize, rect.width()) else drawEnter(c, cx, cy, s)
-            "{emoji}" -> drawSmiley(c, cx, cy, s * 1.2f)
-            "{lang}" -> drawGlobe(c, cx, cy, s * 1.2f)
-            "{space}" -> if (t.showSpaceLabel) { paint.color = t.hint; label(c, spaceLabel, cx, cy, t.specialSize * 0.85f, rect.width()) }
-            "{sym}" -> label(c, "?123", cx, cy, t.specialSize * 0.9f, rect.width())
+            "{shift}" -> Glyphs.draw(c, if (shift == 2) "caps" else if (shift == 1) "shift_on" else "shift", cx, cy, s, ip, rect2, path)
+            "{del}" -> Glyphs.draw(c, "del", cx, cy, s, ip, rect2, path)
+            "{enter}" -> if (enterLabel != null) label(c, enterLabel!!, cx, cy, t.specialSize, rect.width()) else Glyphs.draw(c, "enter", cx, cy, s, ip, rect2, path)
+            "{emoji}" -> Glyphs.draw(c, "emoji", cx, cy, s * 1.1f, ip, rect2, path)
+            "{lang}" -> Glyphs.draw(c, "globe", cx, cy, s * 1.1f, ip, rect2, path)
+            "{space}" -> if (t.showSpaceLabel) { paint.color = t.hint; label(c, spaceLabel, cx, cy, t.specialSize * 0.9f, rect.width()) }
+            "{sym}" -> label(c, symLabel, cx, cy, t.specialSize * 0.95f, rect.width())
             "{sym2}" -> label(c, "=\\<", cx, cy, t.specialSize, rect.width())
-            "{abc}" -> label(c, "ABC", cx, cy, t.specialSize, rect.width())
+            "{abc}" -> label(c, abcLabel, cx, cy, t.specialSize * 0.95f, rect.width())
             else -> {
-                label(c, caseOf(k.label), cx, cy, t.textSize, rect.width())
+                val numRow = k.hScale < 1f
+                if (numRow) paint.color = t.textSpecial
+                val punct = k.label.length == 1 && !k.label[0].isLetterOrDigit()
+                label(c, caseOf(k.label), cx, cy, t.textSize * (if (numRow) 0.8f else if (punct) 1.2f else 1f), rect.width())
                 if (t.showHints && k.hint != null) {
                     paint.color = t.hint; paint.textSize = t.hintSize; paint.textAlign = Paint.Align.RIGHT
-                    c.drawText(k.hint!!, rect.right - t.hintSize * 0.5f, rect.top + t.hintSize * 1.4f, paint)
+                    c.drawText(k.hint!!, rect.right - t.hintSize * 0.55f, rect.top + t.hintSize * 1.45f, paint)
                 }
             }
         }
@@ -259,40 +282,6 @@ class KeyboardView(ctx: Context) : View(ctx) {
         val w = paint.measureText(s)
         if (w > maxW * 0.85f) paint.textSize = size * maxW * 0.85f / w
         c.drawText(s, cx, cy - (paint.ascent() + paint.descent()) / 2, paint)
-    }
-
-    private fun drawShift(c: Canvas, x: Float, y: Float, s: Float) {
-        path.reset()
-        path.moveTo(x, y - s); path.lineTo(x + s, y); path.lineTo(x + s * .45f, y); path.lineTo(x + s * .45f, y + s * .8f)
-        path.lineTo(x - s * .45f, y + s * .8f); path.lineTo(x - s * .45f, y); path.lineTo(x - s, y); path.close()
-        ip.style = if (shift != 0) Paint.Style.FILL_AND_STROKE else Paint.Style.STROKE
-        c.drawPath(path, ip)
-        if (shift == 2) { ip.style = Paint.Style.STROKE; c.drawLine(x - s * .45f, y + s * 1.2f, x + s * .45f, y + s * 1.2f, ip) }
-    }
-    private fun drawDel(c: Canvas, x: Float, y: Float, s: Float) {
-        path.reset()
-        path.moveTo(x - s * 1.2f, y); path.lineTo(x - s * .5f, y - s * .8f); path.lineTo(x + s * 1.1f, y - s * .8f)
-        path.lineTo(x + s * 1.1f, y + s * .8f); path.lineTo(x - s * .5f, y + s * .8f); path.close()
-        c.drawPath(path, ip)
-        c.drawLine(x - s * .1f, y - s * .35f, x + s * .6f, y + s * .35f, ip)
-        c.drawLine(x - s * .1f, y + s * .35f, x + s * .6f, y - s * .35f, ip)
-    }
-    private fun drawEnter(c: Canvas, x: Float, y: Float, s: Float) {
-        path.reset()
-        path.moveTo(x + s, y - s * .8f); path.lineTo(x + s, y); path.lineTo(x - s, y)
-        path.moveTo(x - s * .35f, y - s * .6f); path.lineTo(x - s, y); path.lineTo(x - s * .35f, y + s * .6f)
-        c.drawPath(path, ip)
-    }
-    private fun drawSmiley(c: Canvas, x: Float, y: Float, s: Float) {
-        c.drawCircle(x, y, s, ip)
-        paint.style = Paint.Style.FILL
-        c.drawCircle(x - s * .35f, y - s * .25f, s * .1f, paint); c.drawCircle(x + s * .35f, y - s * .25f, s * .1f, paint)
-        rect.set(x - s * .55f, y - s * .5f, x + s * .55f, y + s * .6f); c.drawArc(rect, 30f, 120f, false, ip)
-    }
-    private fun drawGlobe(c: Canvas, x: Float, y: Float, s: Float) {
-        c.drawCircle(x, y, s, ip)
-        rect.set(x - s * .45f, y - s, x + s * .45f, y + s); c.drawOval(rect, ip)
-        c.drawLine(x - s, y, x + s, y, ip)
     }
 
     // ---------------- touch ----------------

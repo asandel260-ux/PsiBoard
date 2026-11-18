@@ -112,6 +112,7 @@ class PsiBoardService : InputMethodService(), KbListener, SharedPreferences.OnSh
         if (lang !in langs) lang = langs[0]
         kb.submitRows(Layouts.build(lang, page, langs.size > 1))
         kb.spaceLabel = if (lang == "fa") "فارسی" else "English"
+        kb.symLabel = if (lang == "fa") "۱۲۳" else "?123"; kb.abcLabel = if (lang == "fa") "ابج" else "ABC"
     }
 
     private fun showPanel(which: View?) {
@@ -304,7 +305,7 @@ class PsiBoardService : InputMethodService(), KbListener, SharedPreferences.OnSh
             btn("paste") { currentInputConnection?.performContextMenuAction(android.R.id.paste) }
         }
         if (Settings.bool("tb_onehand")) btn("onehand") { Settings.sp.edit().putBoolean("one_handed", !Settings.bool("one_handed")).apply() }
-        if (Settings.bool("tb_settings")) btn("gear") {
+        if (Settings.bool("tb_settings")) btn("tune") {
             startActivity(Intent(this, SettingsActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
         }
     }

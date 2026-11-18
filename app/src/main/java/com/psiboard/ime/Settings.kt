@@ -32,36 +32,37 @@ object Settings {
     val langs = listOf("en", "fa")
 
     val all: List<S> = listOf(
-        ChoiceS("preset", "Theme preset (applies colors)", A, Presets.names(), "Dark"),
-        ColorS("c_bg", "Keyboard background", A, 0xFF15151A.toInt()),
-        SwitchS("bg_gradient", "Background gradient", A, false),
-        ColorS("c_bg2", "Gradient end color", A, 0xFF24242C.toInt()),
-        ColorS("c_key", "Key", A, 0xFF2B2B33.toInt()),
-        ColorS("c_key_pressed", "Key pressed", A, 0xFF50505C.toInt()),
-        ColorS("c_special", "Special key (shift, del, ...)", A, 0xFF202026.toInt()),
-        ColorS("c_special_pressed", "Special key pressed", A, 0xFF3E3E49.toInt()),
+        ChoiceS("preset", "Theme preset (applies colors and key shape)", A, Presets.names(), "Midnight"),
+        ColorS("c_bg", "Keyboard background", A, 0xFF14141A.toInt()),
+        SwitchS("bg_gradient", "Background gradient", A, true),
+        ColorS("c_bg2", "Gradient end color", A, 0xFF0C0C11.toInt()),
+        ColorS("c_key", "Key", A, 0xFF2A2A34.toInt()),
+        ColorS("c_key_pressed", "Key pressed", A, 0xFF4B4D66.toInt()),
+        ColorS("c_special", "Special key (shift, del, ...)", A, 0xFF1D1D25.toInt()),
+        ColorS("c_special_pressed", "Special key pressed", A, 0xFF383A50.toInt()),
         ColorS("c_accent", "Enter / accent key", A, 0xFF7C9BFF.toInt()),
         ColorS("c_text", "Key text", A, 0xFFF1F1F6.toInt()),
-        ColorS("c_text_special", "Special key text / icons", A, 0xFFC9C9D4.toInt()),
+        ColorS("c_text_special", "Special key text / icons", A, 0xFFB4B6C8.toInt()),
         ColorS("c_text_accent", "Accent key text", A, 0xFFFFFFFF.toInt()),
         ColorS("c_hint", "Long-press hint text", A, 0xFF8A8A98.toInt()),
         ColorS("c_border", "Key border", A, 0x00000000),
         ColorS("c_shadow", "Key shadow", A, 0x55000000),
-        ColorS("c_popup_bg", "Popup background", A, 0xFF3A3A44.toInt()),
+        ColorS("c_popup_bg", "Popup background", A, 0xFF353643.toInt()),
         ColorS("c_popup_sel", "Popup selected item", A, 0xFF7C9BFF.toInt()),
         ColorS("c_popup_text", "Popup text", A, 0xFFFFFFFF.toInt()),
-        ColorS("c_strip_bg", "Suggestion/toolbar background", A, 0xFF15151A.toInt()),
+        ColorS("c_strip_bg", "Suggestion/toolbar background", A, 0xFF14141A.toInt()),
         ColorS("c_strip_text", "Suggestion text", A, 0xFFF1F1F6.toInt()),
-        ColorS("c_strip_icon", "Toolbar icons", A, 0xFFC9C9D4.toInt()),
-        ColorS("c_nav", "Navigation bar tint (bottom padding)", A, 0xFF15151A.toInt()),
+        ColorS("c_strip_icon", "Toolbar icons", A, 0xFFB4B6C8.toInt()),
+        ColorS("c_nav", "Navigation bar tint (bottom padding)", A, 0xFF14141A.toInt()),
 
-        SliderS("key_height", "Key height", B, 36, 80, 52, "dp"),
-        SliderS("key_gap_h", "Horizontal gap between keys", B, 0, 14, 4, "dp"),
+        SliderS("key_height", "Key height", B, 36, 80, 50, "dp"),
+        SliderS("key_gap_h", "Horizontal gap between keys", B, 0, 14, 3, "dp"),
         SliderS("key_gap_v", "Vertical gap between rows", B, 0, 14, 6, "dp"),
-        SliderS("key_radius", "Key corner radius", B, 0, 30, 11, "dp"),
+        SliderS("key_radius", "Key corner radius", B, 0, 30, 9, "dp"),
         SliderS("key_border_w", "Key border width", B, 0, 6, 0, "dp"),
+        SliderS("key_highlight", "Key top-edge highlight", B, 0, 100, 45, "%"),
         SliderS("key_shadow", "Key shadow offset", B, 0, 6, 1, "dp"),
-        SliderS("text_size", "Key text size", B, 12, 34, 22, "sp"),
+        SliderS("text_size", "Key text size", B, 12, 34, 21, "sp"),
         SliderS("special_text_size", "Special key text size", B, 10, 28, 14, "sp"),
         SliderS("hint_size", "Hint text size", B, 6, 16, 9, "sp"),
         SliderS("text_opacity", "Key text opacity", B, 20, 100, 100, "%"),
@@ -144,7 +145,7 @@ object Settings {
         SliderS("clip_card_radius", "Clip card corner radius", G, 0, 24, 10, "dp"),
         SliderS("clip_card_gap", "Clip card gap", G, 0, 16, 5, "dp"),
         SliderS("clip_panel_height", "Panel height (0 = same as keyboard)", G, 0, 100, 0, "%"),
-        ColorS("c_clip_card", "Clip card color", G, 0xFF2B2B33.toInt()),
+        ColorS("c_clip_card", "Clip card color", G, 0xFF2A2A34.toInt()),
         ColorS("c_clip_text", "Clip text color", G, 0xFFF1F1F6.toInt()),
         ColorS("c_clip_pin", "Pinned accent color", G, 0xFFFFC857.toInt()),
         ColorS("c_clip_time", "Clip time/meta color", G, 0xFF8A8A98.toInt()),
@@ -213,27 +214,46 @@ object Settings {
 }
 
 object Presets {
-    private val p = linkedMapOf(
-        "Dark" to emptyMap<String, Long>(),
-        "Light" to mapOf("c_bg" to 0xFFE8EAEF, "c_bg2" to 0xFFD5D8E0, "c_key" to 0xFFFFFFFF, "c_key_pressed" to 0xFFC5C9D6,
-            "c_special" to 0xFFCDD1DB, "c_special_pressed" to 0xFFB0B5C4, "c_accent" to 0xFF3D6BFF, "c_text" to 0xFF1C1C22,
-            "c_text_special" to 0xFF3A3A46, "c_hint" to 0xFF8A8F9C, "c_popup_bg" to 0xFFFFFFFF, "c_popup_text" to 0xFF1C1C22,
-            "c_strip_bg" to 0xFFE8EAEF, "c_strip_text" to 0xFF1C1C22, "c_strip_icon" to 0xFF3A3A46, "c_nav" to 0xFFE8EAEF,
-            "c_shadow" to 0x33000000, "c_clip_card" to 0xFFFFFFFF, "c_clip_text" to 0xFF1C1C22),
-        "AMOLED" to mapOf("c_bg" to 0xFF000000, "c_bg2" to 0xFF000000, "c_key" to 0xFF121212, "c_key_pressed" to 0xFF2E2E2E,
-            "c_special" to 0xFF0A0A0A, "c_special_pressed" to 0xFF2A2A2A, "c_strip_bg" to 0xFF000000, "c_nav" to 0xFF000000,
-            "c_shadow" to 0x00000000, "c_clip_card" to 0xFF121212),
-        "Rose" to mapOf("c_bg" to 0xFF2B1B22, "c_bg2" to 0xFF3D2430, "c_key" to 0xFF4A2D3A, "c_key_pressed" to 0xFF70485A,
-            "c_special" to 0xFF371F2A, "c_accent" to 0xFFFF6B9A, "c_strip_bg" to 0xFF2B1B22, "c_nav" to 0xFF2B1B22, "c_clip_card" to 0xFF4A2D3A),
-        "Forest" to mapOf("c_bg" to 0xFF14211A, "c_bg2" to 0xFF1D3027, "c_key" to 0xFF244033, "c_key_pressed" to 0xFF3C6853,
-            "c_special" to 0xFF1A2E24, "c_accent" to 0xFF4CD18A, "c_strip_bg" to 0xFF14211A, "c_nav" to 0xFF14211A, "c_clip_card" to 0xFF244033)
+    private fun h(v: Long) = v
+    private val p = linkedMapOf<String, Map<String, Long>>(
+        "Midnight" to emptyMap(),
+        "Graphite" to mapOf("c_bg" to 0xFF1A1A1C, "c_bg2" to 0xFF111112, "c_key" to 0xFF2E2E31, "c_key_pressed" to 0xFF58585E, "c_special" to 0xFF222225,
+            "c_special_pressed" to 0xFF45454A, "c_accent" to 0xFFFF9F43, "c_popup_sel" to 0xFFFF9F43),
+        "Ocean" to mapOf("c_bg" to 0xFF0D1A25, "c_bg2" to 0xFF08111A, "c_key" to 0xFF1B3144, "c_key_pressed" to 0xFF2F5878, "c_special" to 0xFF132535,
+            "c_special_pressed" to 0xFF26465F, "c_accent" to 0xFF38BDF8, "c_popup_sel" to 0xFF38BDF8, "c_text_accent" to 0xFF04202E),
+        "Sakura" to mapOf("c_bg" to 0xFF22171E, "c_bg2" to 0xFF170F14, "c_key" to 0xFF3A2632, "c_key_pressed" to 0xFF6B4259, "c_special" to 0xFF2C1C26,
+            "c_special_pressed" to 0xFF553449, "c_accent" to 0xFFFF7EB6, "c_popup_sel" to 0xFFFF7EB6, "c_text_accent" to 0xFF3A0D22),
+        "Mint" to mapOf("c_bg" to 0xFF0E1C19, "c_bg2" to 0xFF08120F, "c_key" to 0xFF1D3531, "c_key_pressed" to 0xFF2F5C52, "c_special" to 0xFF152A26,
+            "c_special_pressed" to 0xFF264A42, "c_accent" to 0xFF34D399, "c_popup_sel" to 0xFF34D399, "c_text_accent" to 0xFF04271B),
+        "Light" to mapOf("c_bg" to 0xFFE6E8EF, "c_bg2" to 0xFFD9DCE6, "c_key" to 0xFFFFFFFF, "c_key_pressed" to 0xFFC3C8D8, "c_special" to 0xFFC9CDDA,
+            "c_special_pressed" to 0xFFADB3C6, "c_accent" to 0xFF4F6BFF, "c_text" to 0xFF1B1C24, "c_text_special" to 0xFF3C3E4D, "c_hint" to 0xFF8B90A0,
+            "c_popup_bg" to 0xFFFFFFFF, "c_popup_text" to 0xFF1B1C24, "c_strip_text" to 0xFF1B1C24, "c_strip_icon" to 0xFF3C3E4D, "c_shadow" to 0x30000000,
+            "c_clip_card" to 0xFFFFFFFF, "c_clip_text" to 0xFF1B1C24, "c_popup_sel" to 0xFF4F6BFF, "key_highlight" to 0),
+        "AMOLED" to mapOf("c_bg" to 0xFF000000, "c_bg2" to 0xFF000000, "c_key" to 0xFF141417, "c_key_pressed" to 0xFF3A3B4C, "c_special" to 0xFF0B0B0D,
+            "c_special_pressed" to 0xFF2A2B38, "c_shadow" to 0x00000000, "key_shadow" to 0),
+        "Flat" to mapOf("key_radius" to 3, "key_shadow" to 0, "key_highlight" to 0, "key_gap_h" to 2, "key_gap_v" to 2, "c_shadow" to 0x00000000),
+        "Bubble" to mapOf("key_radius" to 24, "key_gap_h" to 5, "key_gap_v" to 8, "key_height" to 52, "key_highlight" to 70)
     )
+    private val shapeKeys = listOf("key_radius", "key_shadow", "key_highlight", "key_gap_h", "key_gap_v", "key_height", "key_border_w")
+    private fun mix(a: Int, b: Int, f: Float) = android.graphics.Color.rgb(
+        (android.graphics.Color.red(a) * (1 - f) + android.graphics.Color.red(b) * f).toInt(),
+        (android.graphics.Color.green(a) * (1 - f) + android.graphics.Color.green(b) * f).toInt(),
+        (android.graphics.Color.blue(a) * (1 - f) + android.graphics.Color.blue(b) * f).toInt()) or (0xFF shl 24)
+
     fun names() = p.keys.toList()
     fun apply(name: String) {
         val e = Settings.sp.edit()
-        // reset all colors first so presets are complete, then overlay
-        for (s in Settings.all) if (s is ColorS) e.remove(s.key)
-        p[name]?.forEach { (k, v) -> e.putInt(k, v.toInt()) }
+        for (s in Settings.all) if (s is ColorS || s.key in shapeKeys) e.remove(s.key)
+        val m = HashMap(p[name] ?: emptyMap())
+        val bg = m["c_bg"]?.toInt()
+        if (bg != null) {
+            m.putIfAbsent("c_strip_bg", bg.toLong() and 0xFFFFFFFFL); m.putIfAbsent("c_nav", bg.toLong() and 0xFFFFFFFFL)
+            m["c_key"]?.toInt()?.let { k ->
+                m.putIfAbsent("c_clip_card", k.toLong() and 0xFFFFFFFFL)
+                if (!m.containsKey("c_popup_bg")) m["c_popup_bg"] = mix(k, 0xFFFFFFFF.toInt(), 0.1f).toLong() and 0xFFFFFFFFL
+            }
+        }
+        m.forEach { (k, v) -> e.putInt(k, v.toInt()) }
         e.apply()
     }
 }
