@@ -214,7 +214,6 @@ object Settings {
 }
 
 object Presets {
-    private fun h(v: Long) = v
     private val p = linkedMapOf<String, Map<String, Long>>(
         "Midnight" to emptyMap(),
         "Graphite" to mapOf("c_bg" to 0xFF1A1A1C, "c_bg2" to 0xFF111112, "c_key" to 0xFF2E2E31, "c_key_pressed" to 0xFF58585E, "c_special" to 0xFF222225,
@@ -228,11 +227,11 @@ object Presets {
         "Light" to mapOf("c_bg" to 0xFFE6E8EF, "c_bg2" to 0xFFD9DCE6, "c_key" to 0xFFFFFFFF, "c_key_pressed" to 0xFFC3C8D8, "c_special" to 0xFFC9CDDA,
             "c_special_pressed" to 0xFFADB3C6, "c_accent" to 0xFF4F6BFF, "c_text" to 0xFF1B1C24, "c_text_special" to 0xFF3C3E4D, "c_hint" to 0xFF8B90A0,
             "c_popup_bg" to 0xFFFFFFFF, "c_popup_text" to 0xFF1B1C24, "c_strip_text" to 0xFF1B1C24, "c_strip_icon" to 0xFF3C3E4D, "c_shadow" to 0x30000000,
-            "c_clip_card" to 0xFFFFFFFF, "c_clip_text" to 0xFF1B1C24, "c_popup_sel" to 0xFF4F6BFF, "key_highlight" to 0),
+            "c_clip_card" to 0xFFFFFFFF, "c_clip_text" to 0xFF1B1C24, "c_popup_sel" to 0xFF4F6BFF, "key_highlight" to 0L),
         "AMOLED" to mapOf("c_bg" to 0xFF000000, "c_bg2" to 0xFF000000, "c_key" to 0xFF141417, "c_key_pressed" to 0xFF3A3B4C, "c_special" to 0xFF0B0B0D,
-            "c_special_pressed" to 0xFF2A2B38, "c_shadow" to 0x00000000, "key_shadow" to 0),
-        "Flat" to mapOf("key_radius" to 3, "key_shadow" to 0, "key_highlight" to 0, "key_gap_h" to 2, "key_gap_v" to 2, "c_shadow" to 0x00000000),
-        "Bubble" to mapOf("key_radius" to 24, "key_gap_h" to 5, "key_gap_v" to 8, "key_height" to 52, "key_highlight" to 70)
+            "c_special_pressed" to 0xFF2A2B38, "c_shadow" to 0x00000000, "key_shadow" to 0L),
+        "Flat" to mapOf("key_radius" to 3L, "key_shadow" to 0L, "key_highlight" to 0L, "key_gap_h" to 2L, "key_gap_v" to 2L, "c_shadow" to 0x00000000),
+        "Bubble" to mapOf("key_radius" to 24L, "key_gap_h" to 5L, "key_gap_v" to 8L, "key_height" to 52L, "key_highlight" to 70L)
     )
     private val shapeKeys = listOf("key_radius", "key_shadow", "key_highlight", "key_gap_h", "key_gap_v", "key_height", "key_border_w")
     private fun mix(a: Int, b: Int, f: Float) = android.graphics.Color.rgb(
