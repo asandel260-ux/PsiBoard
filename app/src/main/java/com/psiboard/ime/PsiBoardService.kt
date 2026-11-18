@@ -286,24 +286,25 @@ class PsiBoardService : InputMethodService(), KbListener, SharedPreferences.OnSh
         }
         if (list.isNotEmpty()) {
             val (w, _) = wordAndPrev(before)
-            list.forEach { s ->
+            list.forEachIndexed { i, s ->
+                if (i > 0) strip.addView(View(this).apply { setBackgroundColor((t.stripIcon and 0x00FFFFFF) or 0x33000000) }, LinearLayout.LayoutParams(1, (t.stripH * 0.45f).toInt()))
                 strip.addView(chip(s, t) { replaceWord(w, s) }, LinearLayout.LayoutParams(0, -1, 1f))
             }
             return
         }
         if (!Settings.bool("tb_show")) return
-        fun btn(label: String, on: () -> Unit) = strip.addView(chip(label, t, on), LinearLayout.LayoutParams(0, -1, 1f))
-        if (Settings.bool("tb_voice")) btn("🌐") { (getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager).showInputMethodPicker() }
-        if (Settings.bool("tb_clip")) btn("📋") { showPanel(clipPanel) }
-        if (Settings.bool("tb_emoji")) btn("😀") { showPanel(emojiPanel) }
-        if (Settings.bool("tb_cursor")) { btn("◀") { onMoveCursor(-1, false) }; btn("▶") { onMoveCursor(1, false) } }
+        fun btn(icon: String, on: () -> Unit) = strip.addView(IconView(this, icon, t.stripIcon, on), LinearLayout.LayoutParams(0, -1, 1f))
+        if (Settings.bool("tb_voice")) btn("globe") { (getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager).showInputMethodPicker() }
+        if (Settings.bool("tb_clip")) btn("clip") { showPanel(clipPanel) }
+        if (Settings.bool("tb_emoji")) btn("emoji") { showPanel(emojiPanel) }
+        if (Settings.bool("tb_cursor")) { btn("left") { onMoveCursor(-1, false) }; btn("right") { onMoveCursor(1, false) } }
         if (Settings.bool("tb_select_all")) {
-            btn("All") { currentInputConnection?.performContextMenuAction(android.R.id.selectAll) }
-            btn("Copy") { currentInputConnection?.performContextMenuAction(android.R.id.copy) }
-            btn("Paste") { currentInputConnection?.performContextMenuAction(android.R.id.paste) }
+            btn("all") { currentInputConnection?.performContextMenuAction(android.R.id.selectAll) }
+            btn("copy") { currentInputConnection?.performContextMenuAction(android.R.id.copy) }
+            btn("paste") { currentInputConnection?.performContextMenuAction(android.R.id.paste) }
         }
-        if (Settings.bool("tb_onehand")) btn("⇆") { Settings.sp.edit().putBoolean("one_handed", !Settings.bool("one_handed")).apply() }
-        if (Settings.bool("tb_settings")) btn("⚙") {
+        if (Settings.bool("tb_onehand")) btn("onehand") { Settings.sp.edit().putBoolean("one_handed", !Settings.bool("one_handed")).apply() }
+        if (Settings.bool("tb_settings")) btn("gear") {
             startActivity(Intent(this, SettingsActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
         }
     }

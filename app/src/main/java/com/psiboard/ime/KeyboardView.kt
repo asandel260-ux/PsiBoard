@@ -170,7 +170,7 @@ class KeyboardView(ctx: Context) : View(ctx) {
     private fun scale() = if (isLandscape) th.landScale else th.heightScale
 
     override fun onMeasure(wSpec: Int, hSpec: Int) {
-        val hh = th.topPad + th.bottomPad + rows.size * th.keyH * scale()
+        val hh = th.topPad + th.bottomPad + rows.sumOf { (it.firstOrNull()?.hScale ?: 1f).toDouble() }.toFloat() * th.keyH * scale()
         setMeasuredDimension(MeasureSpec.getSize(wSpec), hh.toInt())
     }
     override fun onSizeChanged(w: Int, h: Int, ow: Int, oh: Int) { layoutKeys() }
@@ -184,12 +184,14 @@ class KeyboardView(ctx: Context) : View(ctx) {
         val pitch = t.keyH * scale()
         val body = rows.dropLast(1)
         val unit = availW / max(10f, body.maxOfOrNull { r -> r.sumOf { it.weight.toDouble() }.toFloat() } ?: 10f)
+        var yy = t.topPad
         rows.forEachIndexed { ri, row ->
             val total = row.sumOf { it.weight.toDouble() }.toFloat()
             val u = if (ri == rows.size - 1) availW / total else unit
             var x = left + (availW - total * u) / 2f
-            val y = t.topPad + ri * pitch
-            for (k in row) { k.x = x; k.y = y; k.w = k.weight * u; k.h = pitch; x += k.w }
+            val rh = pitch * row[0].hScale
+            for (k in row) { k.x = x; k.y = yy; k.w = k.weight * u; k.h = rh; x += k.w }
+            yy += rh
         }
     }
 
@@ -239,7 +241,7 @@ class KeyboardView(ctx: Context) : View(ctx) {
             "{emoji}" -> drawSmiley(c, cx, cy, s * 1.2f)
             "{lang}" -> drawGlobe(c, cx, cy, s * 1.2f)
             "{space}" -> if (t.showSpaceLabel) { paint.color = t.hint; label(c, spaceLabel, cx, cy, t.specialSize * 0.85f, rect.width()) }
-            "{sym}" -> label(c, "?123", cx, cy, t.specialSize, rect.width())
+            "{sym}" -> label(c, "?123", cx, cy, t.specialSize * 0.9f, rect.width())
             "{sym2}" -> label(c, "=\\<", cx, cy, t.specialSize, rect.width())
             "{abc}" -> label(c, "ABC", cx, cy, t.specialSize, rect.width())
             else -> {
@@ -247,10 +249,6 @@ class KeyboardView(ctx: Context) : View(ctx) {
                 if (t.showHints && k.hint != null) {
                     paint.color = t.hint; paint.textSize = t.hintSize; paint.textAlign = Paint.Align.RIGHT
                     c.drawText(k.hint!!, rect.right - t.hintSize * 0.5f, rect.top + t.hintSize * 1.4f, paint)
-                } else if (t.showHints && k.popups.isNotEmpty() && k.label.length == 1 && !k.label[0].isLetterOrDigit()) {
-                    // punctuation keys show their first alternative as a hint
-                    paint.color = t.hint; paint.textSize = t.hintSize; paint.textAlign = Paint.Align.RIGHT
-                    c.drawText(k.popups[0], rect.right - t.hintSize * 0.5f, rect.top + t.hintSize * 1.4f, paint)
                 }
             }
         }

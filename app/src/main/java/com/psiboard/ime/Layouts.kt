@@ -3,6 +3,7 @@ package com.psiboard.ime
 class Key(val label: String, val token: String, val popups: List<String>, val weight: Float, val special: Boolean) {
     var x = 0f; var y = 0f; var w = 0f; var h = 0f
     var pressed = false
+    var hScale = 1f
     var hint: String? = null
 }
 
@@ -78,7 +79,8 @@ object Layouts {
                 val numText = Settings.str("layout_numrow").ifBlank { "1 2 3 4 5 6 7 8 9 0" }
                 val digits = numText.split(Regex("\\s+")).map { if (fa && Settings.bool("fa_digits")) persianDigits(it) else it }
                 if (Settings.bool("number_row")) {
-                    rows.add(0, digits.map { Key(it, it, emptyList(), 1f, false) })
+                    val maxW = maxOf(10f, rows.maxOfOrNull { r -> r.sumOf { it.weight.toDouble() }.toFloat() } ?: 10f)
+                    rows.add(0, digits.map { d -> Key(d, d, emptyList(), maxW / digits.size, false).also { it.hScale = 0.8f } })
                 } else if (rows.isNotEmpty()) {
                     rows[0].forEachIndexed { i, k -> if (!k.special && i < digits.size) k.hint = digits[i] }
                     rows[0] = rows[0].mapIndexed { i, k ->
@@ -88,7 +90,7 @@ object Layouts {
             }
         }
         val b = ArrayList<String>()
-        if (Settings.bool("show_symbols_key")) b.add(if (page == 0) "{sym}*1.4" else "{abc}*1.4")
+        if (Settings.bool("show_symbols_key")) b.add(if (page == 0) "{sym}*1.5" else "{abc}*1.5")
         if (Settings.bool("show_emoji_key")) b.add("{emoji}")
         if (multiLang) b.add("{lang}")
         val cp = Settings.bool("show_comma_period")
