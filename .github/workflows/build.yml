@@ -16,11 +16,15 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with: { gradle-version: '8.9' }
       - run: gradle assembleDebug --stacktrace
-      - run: cp app/build/outputs/apk/debug/app-debug.apk PsiBoard-${{ github.ref_name }}.apk
+      - run: cp app/build/outputs/apk/debug/app-debug.apk PsiBoard.apk
       - uses: actions/upload-artifact@v4
-        with: { name: PsiBoard-apk, path: PsiBoard-*.apk }
+        with: { name: PsiBoard-apk, path: PsiBoard.apk }
+      - id: ver
+        run: echo "v=$(grep -oP 'versionName = "\K[^"]+' app/build.gradle.kts)" >> $GITHUB_OUTPUT
       - uses: softprops/action-gh-release@v2
-        if: startsWith(github.ref, 'refs/tags/v')
+        if: github.ref == 'refs/heads/main'
         with:
-          files: PsiBoard-*.apk
+          tag_name: v${{ steps.ver.outputs.v }}
+          name: PsiBoard v${{ steps.ver.outputs.v }}
+          files: PsiBoard.apk
           generate_release_notes: true
