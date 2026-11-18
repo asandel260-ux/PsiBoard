@@ -110,7 +110,7 @@ class PsiBoardService : InputMethodService(), KbListener, SharedPreferences.OnSh
     private fun applyLayout() {
         val langs = enabledLangs()
         if (lang !in langs) lang = langs[0]
-        kb.setRows(Layouts.build(lang, page, langs.size > 1))
+        kb.submitRows(Layouts.build(lang, page, langs.size > 1))
         kb.spaceLabel = if (lang == "fa") "فارسی" else "English"
     }
 

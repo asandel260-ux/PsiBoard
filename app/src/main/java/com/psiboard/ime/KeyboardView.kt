@@ -165,7 +165,7 @@ class KeyboardView(ctx: Context) : View(ctx) {
     private var popItemW = 0f
 
     fun applyTheme(t: Theme) { th = t; requestLayout(); invalidate() }
-    fun setRows(r: List<List<Key>>) { rows = r; allKeys.clear(); r.forEach { allKeys.addAll(it) }; requestLayout(); layoutKeys(); invalidate() }
+    fun submitRows(r: List<List<Key>>) { rows = r; allKeys.clear(); r.forEach { allKeys.addAll(it) }; requestLayout(); layoutKeys(); invalidate() }
 
     private fun scale() = if (isLandscape) th.landScale else th.heightScale
 

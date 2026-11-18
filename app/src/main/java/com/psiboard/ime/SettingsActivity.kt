@@ -55,7 +55,7 @@ class SettingsActivity : Activity(), SharedPreferences.OnSharedPreferenceChangeL
 
     private fun refreshPreview() {
         preview.applyTheme(Theme(this))
-        preview.setRows(Layouts.build(Settings.str("default_lang"), 0, false))
+        preview.submitRows(Layouts.build(Settings.str("default_lang"), 0, false))
     }
 
     private fun build() {
