@@ -114,6 +114,7 @@ class Theme(ctx: Context) {
     val stripH = dp("strip_height")
     val stripTextSize = sp("strip_text_size")
     val showSpaceLabel = Settings.bool("show_space_label")
+    val enterIcons = Settings.bool("enter_icons")
     val enTf: Typeface = Fonts.resolve(ctx, Settings.str("font_en"), false)
     val faTf: Typeface = Fonts.resolve(ctx, Settings.str("font_fa"), true)
     val faScale = Settings.int("fa_text_scale") / 100f
@@ -276,13 +277,14 @@ class KeyboardView(ctx: Context) : View(ctx) {
         val minSide = min(rect.width(), rect.height())
         val rad = min(t.radius, minSide * 0.34f)
         val enter = k.token == "{enter}"
+        val fn = k.special && k.token != "{space}"   // space bar is a big key: letter tone, so tinted function keys frame the letters
         val amt = pressAmt(k, now)
         if (t.shadowOff > 0 && amt < 0.5f) {
             paint.style = Paint.Style.FILL; paint.color = t.shadow
             rect.offset(0f, t.shadowOff); c.drawRoundRect(rect, rad, rad, paint); rect.offset(0f, -t.shadowOff)
         }
-        val base = if (enter) t.accent else if (k.special) t.special else t.key
-        val down = if (enter) Ok.mix(t.accent, Color.BLACK, 0.22f) else if (k.special) t.specialP else t.keyP
+        val base = if (enter) t.accent else if (fn) t.special else t.key
+        val down = if (enter) Ok.mix(t.accent, Color.BLACK, 0.22f) else if (fn) t.specialP else t.keyP
         paint.style = Paint.Style.FILL
         paint.color = if (amt > 0f) Ok.mix(base, down, amt) else base
         c.drawRoundRect(rect, rad, rad, paint)
@@ -300,7 +302,7 @@ class KeyboardView(ctx: Context) : View(ctx) {
             c.drawRoundRect(rect, rad, rad, paint)
         }
         val cx = rect.centerX(); val cy = rect.centerY()
-        val fg = if (enter) t.textAccent else if (k.special) t.textSpecial else t.text
+        val fg = if (enter) t.textAccent else if (fn) t.textSpecial else t.text
         val fa = lang == "fa"
         val tscale = if (fa) t.faScale else 1f
         paint.style = Paint.Style.FILL; paint.color = fg; paint.typeface = if (fa) t.faTf else t.enTf; paint.textAlign = Paint.Align.CENTER
@@ -310,7 +312,12 @@ class KeyboardView(ctx: Context) : View(ctx) {
             "{shift}" -> Glyphs.draw(c, if (shift == 2) "caps" else if (shift == 1) "shift_on" else "shift", cx, cy, s, ip, rect2, path)
             "{del}" -> Glyphs.draw(c, "del", cx, cy, s, ip, rect2, path)
             "{zwnj}" -> Glyphs.draw(c, "zwnj", cx, cy, s, ip, rect2, path)
-            "{enter}" -> if (enterLabel != null) label(c, enterLabel!!, cx, cy, t.specialSize, rect.width()) else Glyphs.draw(c, "enter", cx, cy, s, ip, rect2, path)
+            "{enter}" -> {
+                val ic = if (t.enterIcons || enterLabel == null) when (enterLabel) {
+                    "Go" -> "go"; "Search" -> "search"; "Send" -> "send"; "Next" -> "next"; "Done" -> "done"; else -> "enter"
+                } else null
+                if (ic != null) Glyphs.draw(c, ic, cx, cy, s, ip, rect2, path) else label(c, enterLabel!!, cx, cy, t.specialSize * 0.95f, rect.width())
+            }
             "{emoji}" -> Glyphs.draw(c, "emoji", cx, cy, s * 1.05f, ip, rect2, path)
             "{lang}" -> Glyphs.draw(c, "globe", cx, cy, s * 1.05f, ip, rect2, path)
             "{space}" -> if (t.showSpaceLabel) { paint.color = t.hint; label(c, spaceLabel, cx, cy, t.specialSize * 0.9f * tscale, rect.width()) }

@@ -12,9 +12,19 @@ adb shell wm size 720x1560
 adb shell wm density 320
 sleep 2
 
+# Select PsiBoard as the current keyboard. The package manager needs a moment after an install / force-stop,
+# so retry until the system confirms.
 set_ime() {
-  { echo "ime enable: $(adb shell ime enable $IME 2>&1 | tr -d '\r')"
-    echo "ime set:    $(adb shell ime set $IME 2>&1 | tr -d '\r')"; } >> $OUT/ime.txt
+  local i
+  for i in 1 2 3 4 5 6 7 8; do
+    local e s
+    e=$(adb shell ime enable $IME 2>&1 | tr -d '\r')
+    s=$(adb shell ime set $IME 2>&1 | tr -d '\r')
+    echo "try $i: $e | $s" >> $OUT/ime.txt
+    case "$s" in *selected*) return 0;; esac
+    sleep 2
+  done
+  return 1
 }
 
 # shoot NAME [am-extras...]
@@ -25,16 +35,17 @@ set_ime() {
 shoot() {
   local name=$1; shift
   adb shell cmd uimode night $([ "${NIGHT:-0}" = "1" ] && echo yes || echo no) > /dev/null 2>&1
-  # force-stop makes Android drop the current IME if it belongs to the stopped package, so select it again afterwards
+  # force-stop makes Android drop the current IME if it belongs to the stopped package
+  # (the broadcast reaches the IME manager asynchronously), so wait, then apply settings, then select the IME
   adb shell am force-stop $PKG
-  sleep 2   # the force-stop broadcast reaches the IME manager asynchronously; selecting too early gets undone
-  echo "== $name" >> $OUT/ime.txt
-  set_ime
-  sleep 1
+  sleep 2
   adb shell input keyevent KEYCODE_HOME
   sleep 1
   adb shell am start -W -n $PKG/.SettingsActivity --ez psi_reset true "$@" > /dev/null
   sleep 3
+  echo "== $name" >> $OUT/ime.txt
+  set_ime
+  sleep 2
   if [ "${TAP:-1}" = "1" ]; then
     adb shell uiautomator dump /sdcard/ui.xml > /dev/null 2>&1
     adb pull /sdcard/ui.xml /tmp/ui.xml > /dev/null 2>&1
@@ -49,7 +60,6 @@ shoot() {
   fi
   adb exec-out screencap -p > $OUT/$name.png
   echo "default_input_method=$(adb shell settings get secure default_input_method | tr -d '\r')" >> $OUT/ime.txt
-  adb shell dumpsys input_method | grep -E "mCurMethodId|mCurId|mInputShown|mImeWindowVis" | head -4 >> $OUT/ime.txt
   wait
 }
 

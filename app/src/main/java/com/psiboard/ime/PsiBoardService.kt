@@ -72,6 +72,7 @@ class PsiBoardService : InputMethodService(), KbListener, SharedPreferences.OnSh
 
     override fun onSharedPreferenceChanged(sp: SharedPreferences?, key: String?) {
         if (key != null && key !in Settings.keys) return
+        if (key == null || key == "default_lang") lang = Settings.str("default_lang")
         ui.removeCallbacks(refreshRunnable); ui.postDelayed(refreshRunnable, 60)
     }
 
@@ -127,7 +128,7 @@ class PsiBoardService : InputMethodService(), KbListener, SharedPreferences.OnSh
         val langs = enabledLangs()
         if (lang !in langs) lang = langs[0]
         kb.lang = lang
-        kb.submitRows(Layouts.build(lang, page, langs.size > 1))
+        kb.submitRows(Layouts.build(lang, page, langs.size > 1, kb.enterLabel != null && !Settings.bool("enter_icons")))
         kb.spaceLabel = if (lang == "fa") "فارسی" else "English"
         kb.symLabel = if (lang == "fa") "۱۲۳" else "?123"; kb.abcLabel = if (lang == "fa") "ابج" else "ABC"
     }
@@ -313,7 +314,7 @@ class PsiBoardService : InputMethodService(), KbListener, SharedPreferences.OnSh
         }
         if (!Settings.bool("tb_show")) return
         fun btn(icon: String, on: () -> Unit) = strip.addView(IconView(this, icon, t.stripIcon, on), LinearLayout.LayoutParams(0, -1, 1f))
-        if (Settings.bool("tb_voice")) btn("globe") { (getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager).showInputMethodPicker() }
+        if (Settings.bool("tb_voice")) btn("keyboard") { (getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager).showInputMethodPicker() }
         if (Settings.bool("tb_clip")) btn("clip") { showPanel(clipPanel) }
         if (Settings.bool("tb_emoji")) btn("emoji") { showPanel(emojiPanel) }
         if (Settings.bool("tb_cursor")) { btn("left") { onMoveCursor(-1, false) }; btn("right") { onMoveCursor(1, false) } }
@@ -335,6 +336,7 @@ class PsiBoardService : InputMethodService(), KbListener, SharedPreferences.OnSh
         textSize = Settings.int("strip_text_size").toFloat() * (if (fa) t.faScale else 1f)
         gravity = Gravity.CENTER; maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END
         setPadding((8 * t.dens).toInt(), 0, (8 * t.dens).toInt(), 0)
+        isFocusable = false
         setOnClickListener { on() }
     }
 

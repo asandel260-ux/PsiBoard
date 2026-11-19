@@ -71,7 +71,7 @@ object Layouts {
     fun persianDigits(s: String): String = s.map { if (it in '0'..'9') ('۰' + (it - '0')) else it }.joinToString("")
 
     /** page: 0 letters, 1 symbols, 2 more symbols */
-    fun build(lang: String, page: Int, multiLang: Boolean): List<List<Key>> {
+    fun build(lang: String, page: Int, multiLang: Boolean, wideEnter: Boolean = false): List<List<Key>> {
         val extra = parseExtras(Settings.str("long_press_extra"))
         val fa = lang == "fa"
         val rows: MutableList<List<Key>>
@@ -102,7 +102,7 @@ object Layouts {
         if (cp) b.add(if (fa) "{fcomma}" else "{comma}")
         b.add("{space}*${Settings.int("space_weight") * 0.2f}")
         if (cp) b.add("{period}")
-        b.add("{enter}*1.4")
+        b.add(if (wideEnter) "{enter}*2" else "{enter}*1.4")
         rows.add(b.map { parseKey(it, extra) })
         return rows
     }

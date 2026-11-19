@@ -67,9 +67,11 @@ object Glyphs {
                 c.drawPath(path, p)
             }
             "paste" -> {
-                c.drawLine(cx, cy - s, cx, cy + s * .3f, p)
-                path.reset(); path.moveTo(cx - s * .55f, cy - s * .25f); path.lineTo(cx, cy + s * .35f); path.lineTo(cx + s * .55f, cy - s * .25f); c.drawPath(path, p)
-                c.drawLine(cx - s * .85f, cy + s * .95f, cx + s * .85f, cy + s * .95f, p)
+                r.set(cx - s * .8f, cy - s * .8f, cx + s * .8f, cy + s); c.drawRoundRect(r, s * .22f, s * .22f, p)
+                r.set(cx - s * .38f, cy - s * 1.1f, cx + s * .38f, cy - s * .55f); c.drawRoundRect(r, s * .18f, s * .18f, p)
+                c.drawLine(cx, cy - s * .15f, cx, cy + s * .5f, p)
+                path.reset(); path.moveTo(cx - s * .32f, cy + s * .2f); path.lineTo(cx, cy + s * .55f); path.lineTo(cx + s * .32f, cy + s * .2f)
+                c.drawPath(path, p)
             }
             "tune" -> {
                 val ys = floatArrayOf(-.7f, 0f, .7f); val ks = floatArrayOf(.35f, -.4f, .45f)
@@ -77,6 +79,37 @@ object Glyphs {
                     c.drawLine(cx - s, cy + ys[i] * s, cx + s, cy + ys[i] * s, p)
                     p.style = Paint.Style.FILL; c.drawCircle(cx + ks[i] * s, cy + ys[i] * s, s * .26f, p); p.style = Paint.Style.STROKE
                 }
+            }
+            "search" -> {
+                c.drawCircle(cx - s * .18f, cy - s * .18f, s * .62f, p)
+                c.drawLine(cx + s * .28f, cy + s * .28f, cx + s * .95f, cy + s * .95f, p)
+            }
+            "send" -> {
+                path.reset()
+                path.moveTo(cx - s, cy - s * .85f); path.lineTo(cx + s, cy); path.lineTo(cx - s, cy + s * .85f); path.lineTo(cx - s * .5f, cy); path.close()
+                c.drawPath(path, p)
+            }
+            "go" -> {
+                c.drawLine(cx - s, cy, cx + s, cy, p)
+                path.reset(); path.moveTo(cx + s * .35f, cy - s * .65f); path.lineTo(cx + s, cy); path.lineTo(cx + s * .35f, cy + s * .65f)
+                c.drawPath(path, p)
+            }
+            "next" -> {
+                c.drawLine(cx - s, cy, cx + s * .55f, cy, p)
+                path.reset(); path.moveTo(cx - s * .02f, cy - s * .6f); path.lineTo(cx + s * .58f, cy); path.lineTo(cx - s * .02f, cy + s * .6f)
+                c.drawPath(path, p)
+                c.drawLine(cx + s, cy - s * .7f, cx + s, cy + s * .7f, p)
+            }
+            "done" -> {
+                path.reset(); path.moveTo(cx - s * .9f, cy + s * .05f); path.lineTo(cx - s * .3f, cy + s * .65f); path.lineTo(cx + s * .95f, cy - s * .65f)
+                c.drawPath(path, p)
+            }
+            "keyboard" -> {
+                r.set(cx - s * 1.15f, cy - s * .8f, cx + s * 1.15f, cy + s * .8f); c.drawRoundRect(r, s * .28f, s * .28f, p)
+                p.style = Paint.Style.FILL
+                for (i in 0..3) { val x = cx + (i - 1.5f) * s * .5f; c.drawCircle(x, cy - s * .32f, s * .1f, p); c.drawCircle(x, cy + s * .02f, s * .1f, p) }
+                p.style = Paint.Style.STROKE
+                c.drawLine(cx - s * .55f, cy + s * .42f, cx + s * .55f, cy + s * .42f, p)
             }
             "zwnj" -> {
                 // half-space (ZWNJ): the "space" bracket with a break in its base = a space that does not join
@@ -100,7 +133,7 @@ class IconView(ctx: Context, private val kind: String, private val tint: Int, pr
     private val p = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = tint }
     private val r = RectF(); private val path = Path()
     private var down = false
-    init { isClickable = true; setOnClickListener { onClick() } }
+    init { isClickable = true; isFocusable = false; setOnClickListener { onClick() } }
 
     override fun onTouchEvent(e: MotionEvent): Boolean {
         when (e.actionMasked) {
