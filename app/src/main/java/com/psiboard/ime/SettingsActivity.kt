@@ -44,6 +44,7 @@ class SettingsActivity : Activity(), SharedPreferences.OnSharedPreferenceChangeL
     override fun onCreate(b: Bundle?) {
         super.onCreate(b)
         Settings.init(this)
+        if (applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE != 0) applyDebugExtras()
         window.statusBarColor = cBg; window.navigationBarColor = cBg
         if (android.os.Build.VERSION.SDK_INT >= 23 && !night) window.decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
         val page = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setBackgroundColor(cBg) }
@@ -89,6 +90,25 @@ class SettingsActivity : Activity(), SharedPreferences.OnSharedPreferenceChangeL
     }
 
     private lateinit var statusCard: LinearLayout
+
+    /** Debug builds only (used by CI screenshot tests): psi_reset, psi_preset, psi_kv="key=value,key=value". */
+    private fun applyDebugExtras() {
+        if (intent.getBooleanExtra("psi_reset", false)) Settings.resetAll()
+        intent.getStringExtra("psi_preset")?.let { Presets.apply(it); Settings.sp.edit().putString("preset", it).apply() }
+        intent.getStringExtra("psi_kv")?.split(',')?.forEach { kv ->
+            val i = kv.indexOf('='); if (i < 0) return@forEach
+            val k = kv.substring(0, i); val v = kv.substring(i + 1)
+            val e = Settings.sp.edit()
+            when (Settings.all.firstOrNull { it.key == k }) {
+                is SwitchS -> e.putBoolean(k, v.toBoolean())
+                is SliderS -> e.putInt(k, v.toInt())
+                is ColorS -> e.putInt(k, v.toLong(16).toInt())
+                is ChoiceS, is TextS -> e.putString(k, v)
+                null -> {}
+            }
+            e.apply()
+        }
+    }
 
     private fun refreshStatus() {
         val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
