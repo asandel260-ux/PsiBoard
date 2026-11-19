@@ -498,14 +498,16 @@ class KeyboardView(ctx: Context) : View(ctx) {
     }
 
     private fun placePopup(v: PopupView, x: Float, y: Float) {
-        val loc = IntArray(2); getLocationOnScreen(loc)
+        // A popup attached to a window is positioned relative to *that window* (the IME window does not start at screen y=0),
+        // so use window coordinates; screen coordinates would push the bubble off the bottom of the display.
+        val loc = IntArray(2); getLocationInWindow(loc)
         val px = (loc[0] + x).toInt(); val py = (loc[1] + y).toInt()
         val w = v.measuredWidth; val hh = v.measuredHeight
         val pw = pop ?: return
         try {
             if (pw.isShowing) pw.update(px, py, w, hh) else { pw.width = w; pw.height = hh; pw.showAtLocation(this, Gravity.NO_GRAVITY, px, py) }
             v.invalidate()
-        } catch (_: Exception) {}
+        } catch (e: Exception) { android.util.Log.w("psiboard", "popup failed", e) }
     }
 
     private fun hidePopup() { try { pop?.dismiss() } catch (_: Exception) {} }

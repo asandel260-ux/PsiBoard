@@ -30,6 +30,7 @@ set_ime() {
 # shoot NAME [am-extras...]
 #   TAP=0     don't focus the text field (settings screen only)
 #   TYPE=abc  type text after the keyboard opened
+#   POST_TAP=x,y  tap a point once the keyboard is open (panels)
 #   HOLD=x,y  long-press a point while the screenshot is taken (popups)
 #   NIGHT=1   system dark mode (affects theme_mode=auto and the settings screen)
 shoot() {
@@ -53,6 +54,7 @@ shoot() {
     sleep 3
   fi
   if [ -n "${TYPE:-}" ]; then adb shell input text "$TYPE"; sleep 2; fi
+  if [ -n "${POST_TAP:-}" ]; then adb shell input tap ${POST_TAP%,*} ${POST_TAP#*,}; sleep 2; fi
   if [ -n "${HOLD:-}" ]; then
     local hx=${HOLD%,*} hy=${HOLD#*,}
     adb shell input swipe $hx $hy $hx $hy 3000 &

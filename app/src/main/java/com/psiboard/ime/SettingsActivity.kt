@@ -137,6 +137,10 @@ class SettingsActivity : Activity(), SharedPreferences.OnSharedPreferenceChangeL
     /** Debug builds only (used by CI screenshot tests): psi_reset, psi_preset, psi_kv="key=value,key=value". */
     private fun applyDebugExtras() {
         if (intent.getBooleanExtra("psi_reset", false)) Settings.resetAll()
+        intent.getStringExtra("psi_clip")?.let { v ->
+            val st = ClipboardStore(this)
+            v.split('|').filter { it.isNotBlank() }.forEach { st.add(it.replace('_', ' ')) }
+        }
         intent.getStringExtra("psi_preset")?.let { Presets.apply(it); Settings.sp.edit().putString("preset", it).apply() }
         intent.getStringExtra("psi_kv")?.split(',')?.forEach { kv ->
             val i = kv.indexOf('='); if (i < 0) return@forEach
