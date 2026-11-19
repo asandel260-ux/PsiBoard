@@ -156,24 +156,33 @@ class PopupView(ctx: Context) : View(ctx) {
     private val p = Paint(Paint.ANTI_ALIAS_FLAG)
     private val r = RectF()
     private val refB = Rect()
-    override fun onMeasure(w: Int, h: Int) = setMeasuredDimension((itemW * items.size).toInt(), itemH.toInt())
+    /** Transparent margin around the bubble so its soft shadow is not clipped by the popup window. */
+    val margin: Int get() = (8 * (th?.dens ?: resources.displayMetrics.density)).toInt()
+    init { setLayerType(LAYER_TYPE_SOFTWARE, null) }   // blurred shadows on shapes need a software layer below API 28
+    override fun onMeasure(w: Int, h: Int) = setMeasuredDimension((itemW * items.size).toInt() + 2 * margin, itemH.toInt() + 2 * margin)
     override fun onDraw(c: Canvas) {
         val t = th ?: return
+        val m = margin.toFloat()
+        val bw = itemW * items.size; val bh = itemH
         val pad = 3f * t.dens
         p.style = Paint.Style.FILL; p.color = t.popupBg
-        r.set(0f, 0f, width.toFloat(), height.toFloat())
+        if (!t.dark) p.setShadowLayer(6f * t.dens, 0f, 2f * t.dens, 0x38000000) else p.clearShadowLayer()
+        r.set(m, m, m + bw, m + bh)
         c.drawRoundRect(r, t.popupRadius, t.popupRadius, p)
+        p.clearShadowLayer()
         p.style = Paint.Style.STROKE; p.strokeWidth = t.dens; p.color = Ok.mix(t.popupBg, t.popupText, 0.22f)
         r.inset(t.dens / 2, t.dens / 2); c.drawRoundRect(r, t.popupRadius, t.popupRadius, p)
         p.style = Paint.Style.FILL
         p.textAlign = Paint.Align.CENTER; p.typeface = if (fa) t.faTf else t.enTf; p.textSize = t.textSize * 1.25f * (if (fa) t.faScale else 1f)
         val ref = if (fa) "اسب" else "Hx"
         p.getTextBounds(ref, 0, ref.length, refB)
-        val base = height / 2f - (refB.top + refB.bottom) / 2f
+        val base = m + bh / 2f - (refB.top + refB.bottom) / 2f
+        val rr = max(0f, t.popupRadius - pad)
         for (i in items.indices) {
-            if (i == sel) { p.color = t.popupSel; r.set(i * itemW + pad, pad, (i + 1) * itemW - pad, height - pad); c.drawRoundRect(r, max(0f, t.popupRadius - pad), max(0f, t.popupRadius - pad), p) }
+            val l = m + i * itemW
+            if (i == sel) { p.color = t.popupSel; r.set(l + pad, m + pad, l + itemW - pad, m + bh - pad); c.drawRoundRect(r, rr, rr, p) }
             p.color = if (i == sel) t.textAccent else t.popupText
-            c.drawText(items[i], i * itemW + itemW / 2, base, p)
+            c.drawText(items[i], l + itemW / 2, base, p)
         }
     }
 }
@@ -201,6 +210,8 @@ class KeyboardView(ctx: Context) : View(ctx) {
     private val path = Path()
     private val allKeys = ArrayList<Key>()
     private var animating = false
+    private val animR = Rect()   // union of the keys that are still fading out
+    private val clipR = Rect()
 
     private class P(val id: Int) {
         var key: Key? = null; var downX = 0f; var lastX = 0f; var swiped = false
@@ -214,13 +225,20 @@ class KeyboardView(ctx: Context) : View(ctx) {
     private var popItemW = 0f
 
     fun applyTheme(t: Theme) { th = t; requestLayout(); invalidate() }
-    fun submitRows(r: List<List<Key>>) { rows = r; allKeys.clear(); r.forEach { allKeys.addAll(it) }; requestLayout(); layoutKeys(); invalidate() }
+    /** Total row units (1 = a full-height row) of the letters page. Symbol pages stretch to the same height so the keyboard never changes size. */
+    private var refUnits = 0f
+    private fun units() = rows.sumOf { (it.firstOrNull()?.hScale ?: 1f).toDouble() }.toFloat()
+
+    fun submitRows(r: List<List<Key>>, letters: Boolean = true) {
+        rows = r; allKeys.clear(); r.forEach { allKeys.addAll(it) }
+        if (letters || refUnits <= 0f) refUnits = units()
+        requestLayout(); layoutKeys(); invalidate()
+    }
 
     private fun scale() = if (isLandscape) th.landScale else th.heightScale
 
     override fun onMeasure(wSpec: Int, hSpec: Int) {
-        val units = rows.sumOf { (it.firstOrNull()?.hScale ?: 1f).toDouble() }.toFloat()
-        setMeasuredDimension(MeasureSpec.getSize(wSpec), (th.topPad + th.bottomPad + units * th.keyH * scale()).toInt())
+        setMeasuredDimension(MeasureSpec.getSize(wSpec), (th.topPad + th.bottomPad + max(refUnits, units()) * th.keyH * scale()).toInt())
     }
     override fun onSizeChanged(w: Int, h: Int, ow: Int, oh: Int) { layoutKeys() }
 
@@ -230,7 +248,8 @@ class KeyboardView(ctx: Context) : View(ctx) {
         var availW = width - 2 * t.sidePad
         var left = t.sidePad
         if (t.oneHanded) { val nw = availW * t.oneHandedW; if (t.oneHandedRight) left = width - t.sidePad - nw; availW = nw }
-        val pitch = t.keyH * scale()
+        val u0 = units()
+        val pitch = if (u0 > 0f) t.keyH * scale() * max(refUnits, u0) / u0 else t.keyH * scale()
         val body = rows.dropLast(1)
         val unit = availW / max(10f, body.maxOfOrNull { r -> r.sumOf { it.weight.toDouble() }.toFloat() } ?: 10f)
         var yy = t.topPad
@@ -255,10 +274,16 @@ class KeyboardView(ctx: Context) : View(ctx) {
         if (t.gradient) paint.shader = LinearGradient(0f, 0f, 0f, height.toFloat(), t.bg, t.bg2, Shader.TileMode.CLAMP) else { paint.shader = null; paint.color = t.bg }
         c.drawRect(0f, 0f, width.toFloat(), height.toFloat(), paint)
         paint.shader = null
-        animating = false
+        animating = false; animR.setEmpty()
         val now = SystemClock.uptimeMillis()
-        for (k in allKeys) drawKey(c, k, now)
-        if (animating) postInvalidateOnAnimation()
+        c.getClipBounds(clipR)
+        val pad = (6f * t.dens).toInt()   // shadows reach a little below a key
+        for (k in allKeys) {
+            // a press only dirties one key: skip the other ~40 instead of re-measuring all their text
+            if (k.x + k.w < clipR.left || k.x > clipR.right || k.y + k.h + pad < clipR.top || k.y - pad > clipR.bottom) continue
+            drawKey(c, k, now)
+        }
+        if (animating) postInvalidateOnAnimation(animR.left, animR.top, animR.right, animR.bottom)
     }
 
     /** 1 while held, easing back to 0 over 150 ms after release: the press state fades instead of snapping. */
@@ -267,6 +292,7 @@ class KeyboardView(ctx: Context) : View(ctx) {
         val dt = now - k.releaseAt
         if (dt >= 150L || k.releaseAt == 0L) return 0f
         animating = true
+        animR.union(k.x.toInt() - 2, k.y.toInt() - 2, (k.x + k.w).toInt() + 2, (k.y + k.h).toInt() + 8)
         val f = 1f - dt / 150f
         return f * f
     }
@@ -501,7 +527,8 @@ class KeyboardView(ctx: Context) : View(ctx) {
         // A popup attached to a window is positioned relative to *that window* (the IME window does not start at screen y=0),
         // so use window coordinates; screen coordinates would push the bubble off the bottom of the display.
         val loc = IntArray(2); getLocationInWindow(loc)
-        val px = (loc[0] + x).toInt(); val py = (loc[1] + y).toInt()
+        val m = v.margin
+        val px = (loc[0] + x).toInt() - m; val py = (loc[1] + y).toInt() - m
         val w = v.measuredWidth; val hh = v.measuredHeight
         val pw = pop ?: return
         try {

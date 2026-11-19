@@ -269,7 +269,7 @@ class SettingsActivity : Activity(), SharedPreferences.OnSharedPreferenceChangeL
                 line.addView(text(s.title, 15f, cText), LinearLayout.LayoutParams(0, -2, 1f)); line.addView(value)
                 val sb = SeekBar(this).apply {
                     max = s.max - s.min; progress = Settings.int(s.key) - s.min
-                    progressTintList = android.content.res.ColorStateList.valueOf(cAccent); thumbTintList = android.content.res.ColorStateList.valueOf(cAccent)
+                    progressTintList = ColorStateList.valueOf(cAccent); thumbTintList = ColorStateList.valueOf(cAccent); progressBackgroundTintList = ColorStateList.valueOf(cTrackOff)
                     setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
                         override fun onProgressChanged(b: SeekBar?, p: Int, user: Boolean) {
                             value.text = valueLabel(s, p + s.min)

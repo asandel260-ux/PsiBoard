@@ -48,6 +48,7 @@ shoot() {
   sleep 2
   adb shell settings put system accelerometer_rotation 0
   adb shell settings put system user_rotation ${ROTATE:-0}
+  adb shell cmd window user-rotation lock ${ROTATE:-0} > /dev/null 2>&1
   adb shell input keyevent KEYCODE_HOME
   sleep 1
   adb shell am start -W -n $PKG/.SettingsActivity --ez psi_reset true "$@" > /dev/null
