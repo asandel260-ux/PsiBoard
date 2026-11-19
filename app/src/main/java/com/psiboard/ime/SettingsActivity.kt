@@ -74,6 +74,7 @@ class SettingsActivity : Activity(), SharedPreferences.OnSharedPreferenceChangeL
         Settings.init(this)
         if (applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE != 0) applyDebugExtras()
         computePal()
+        actionBar?.hide()
         window.statusBarColor = cBg; window.navigationBarColor = cBg
         if (android.os.Build.VERSION.SDK_INT >= 23 && !night) {
             var f = View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
@@ -81,7 +82,7 @@ class SettingsActivity : Activity(), SharedPreferences.OnSharedPreferenceChangeL
             window.decorView.systemUiVisibility = f
         }
         val page = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setBackgroundColor(cBg) }
-        val head = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL; setPadding(dp(20), dp(36), dp(20), dp(12)) }
+        val head = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL; setPadding(dp(20), dp(28), dp(20), dp(12)) }
         head.addView(TextView(this).apply {
             text = "ψ"; textSize = 26f; gravity = Gravity.CENTER; setTextColor(cOnAccent)
             typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL); background = rounded(cAccent, 14)

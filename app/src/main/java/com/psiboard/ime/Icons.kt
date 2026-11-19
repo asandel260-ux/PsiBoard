@@ -79,12 +79,11 @@ object Glyphs {
                 }
             }
             "zwnj" -> {
-                // half-space (ZWNJ): a narrow "space" bracket split in two by a short divider
+                // half-space (ZWNJ): the "space" bracket with a break in its base = a space that does not join
                 path.reset()
-                path.moveTo(cx - s * .8f, cy - s * .4f); path.lineTo(cx - s * .8f, cy + s * .5f)
-                path.lineTo(cx + s * .8f, cy + s * .5f); path.lineTo(cx + s * .8f, cy - s * .4f)
+                path.moveTo(cx - s * .85f, cy - s * .4f); path.lineTo(cx - s * .85f, cy + s * .5f); path.lineTo(cx - s * .2f, cy + s * .5f)
+                path.moveTo(cx + s * .2f, cy + s * .5f); path.lineTo(cx + s * .85f, cy + s * .5f); path.lineTo(cx + s * .85f, cy - s * .4f)
                 c.drawPath(path, p)
-                c.drawLine(cx, cy - s * .4f, cx, cy + s * .5f, p)
             }
             "onehand" -> {
                 c.drawLine(cx - s, cy - s * .4f, cx + s, cy - s * .4f, p); c.drawLine(cx + s * .55f, cy - s * .8f, cx + s, cy - s * .4f, p); c.drawLine(cx + s * .55f, cy, cx + s, cy - s * .4f, p)
