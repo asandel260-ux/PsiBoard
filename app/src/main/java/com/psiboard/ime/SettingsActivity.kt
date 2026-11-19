@@ -140,7 +140,7 @@ class SettingsActivity : Activity(), SharedPreferences.OnSharedPreferenceChangeL
         if (intent.getBooleanExtra("psi_reset", false)) Settings.resetAll()
         intent.getStringExtra("psi_clip")?.let { v ->
             val st = ClipboardStore(this)
-            v.split('|').filter { it.isNotBlank() }.forEach { st.add(it.replace('_', ' ')) }
+            v.split(',').filter { it.isNotBlank() }.forEach { st.add(it.replace('_', ' ')) }
         }
         intent.getStringExtra("psi_preset")?.let { Presets.apply(it); Settings.sp.edit().putString("preset", it).apply() }
         intent.getStringExtra("psi_kv")?.split(',')?.forEach { kv ->

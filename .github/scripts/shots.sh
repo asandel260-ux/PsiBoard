@@ -34,6 +34,9 @@ set_ime() {
 #   TAP=0     don't focus the text field (settings screen only)
 #   TYPE=abc  type text after the keyboard opened
 #   POST_TAP=x,y  tap a point once the keyboard is open (panels)
+#   SCROLL=1  scroll the settings page down
+#   TAPS="x,y x,y"  tap several points in sequence (typing on the keyboard)
+#   ROTATE=1  landscape
 #   HOLD=x,y  long-press a point while the screenshot is taken (popups)
 #   NIGHT=1   system dark mode (affects theme_mode=auto and the settings screen)
 shoot() {
@@ -43,6 +46,8 @@ shoot() {
   # (the broadcast reaches the IME manager asynchronously), so wait, then apply settings, then select the IME
   adb shell am force-stop $PKG
   sleep 2
+  adb shell settings put system accelerometer_rotation 0
+  adb shell settings put system user_rotation ${ROTATE:-0}
   adb shell input keyevent KEYCODE_HOME
   sleep 1
   adb shell am start -W -n $PKG/.SettingsActivity --ez psi_reset true "$@" > /dev/null
@@ -57,6 +62,8 @@ shoot() {
     sleep 3
   fi
   if [ -n "${TYPE:-}" ]; then adb shell input text "$TYPE"; sleep 2; fi
+  if [ -n "${SCROLL:-}" ]; then adb shell input swipe 360 1300 360 400 400; sleep 1; adb shell input swipe 360 1300 360 700 400; sleep 1; fi
+  if [ -n "${TAPS:-}" ]; then for xy in $TAPS; do adb shell input tap ${xy%,*} ${xy#*,}; sleep 0.4; done; sleep 1; fi
   if [ -n "${POST_TAP:-}" ]; then adb shell input tap ${POST_TAP%,*} ${POST_TAP#*,}; sleep 2; fi
   if [ -n "${HOLD:-}" ]; then
     local hx=${HOLD%,*} hy=${HOLD#*,}

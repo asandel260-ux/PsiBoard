@@ -13,9 +13,18 @@ private fun Context.dp(v: Int) = (v * resources.displayMetrics.density).toInt()
 
 private fun roundBg(color: Int, r: Float) = GradientDrawable().apply { setColor(color); cornerRadius = r }
 
-private fun headerButton(c: Context, t: Theme, label: String, onClick: () -> Unit) = TextView(c).apply {
-    text = label; setTextColor(t.stripIcon); textSize = 14f; gravity = Gravity.CENTER
-    setPadding(c.dp(12), 0, c.dp(12), 0); setOnClickListener { onClick() }
+/** Header button: tonal pill like the keyboard's function keys; the selected tab gets the accent tint. */
+private fun pillButton(c: Context, t: Theme, label: String, selected: Boolean = false, key: Boolean = false, onClick: () -> Unit) = TextView(c).apply {
+    text = label; textSize = 14f; gravity = Gravity.CENTER; isFocusable = false
+    typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
+    setTextColor(if (selected) t.text else if (key) t.textSpecial else t.hint)
+    background = when {
+        selected -> roundBg(Ok.mix(t.bg, t.accent, 0.30f), c.dp(16).toFloat())
+        key -> roundBg(t.special, c.dp(16).toFloat())
+        else -> null
+    }
+    setPadding(c.dp(14), 0, c.dp(14), 0)
+    setOnClickListener { onClick() }
 }
 
 class ClipboardPanel(ctx: Context, private val store: ClipboardStore, private val onPaste: (String) -> Unit,
@@ -26,16 +35,18 @@ class ClipboardPanel(ctx: Context, private val store: ClipboardStore, private va
     private val scroll = ScrollView(ctx).apply { isVerticalScrollBarEnabled = false; addView(list) }
     var th = Theme(ctx)
 
-    init { orientation = VERTICAL; addView(header, LayoutParams(-1, ctx.dp(40))); addView(scroll, LayoutParams(-1, 0, 1f)) }
+    init { orientation = VERTICAL; addView(header, LayoutParams(-1, ctx.dp(44))); addView(scroll, LayoutParams(-1, 0, 1f)) }
 
     fun refresh(t: Theme) {
         th = t; setBackgroundColor(t.bg)
         header.removeAllViews()
-        header.addView(headerButton(context, t, "ABC") { onBack() }, LayoutParams(-2, -1))
-        header.addView(headerButton(context, t, if (showSnippets) "Snippets ●" else "Snippets") { showSnippets = true; refresh(th) }, LayoutParams(-2, -1))
-        header.addView(headerButton(context, t, if (!showSnippets) "History ●" else "History") { showSnippets = false; refresh(th) }, LayoutParams(-2, -1))
+        header.setPadding(context.dp(6), context.dp(6), context.dp(6), context.dp(6))
+        fun lp() = LayoutParams(-2, context.dp(32)).apply { setMargins(context.dp(2), 0, context.dp(2), 0) }
+        header.addView(pillButton(context, t, "ABC", key = true) { onBack() }, lp())
+        header.addView(pillButton(context, t, "Snippets", selected = showSnippets) { showSnippets = true; refresh(th) }, lp())
+        header.addView(pillButton(context, t, "History", selected = !showSnippets) { showSnippets = false; refresh(th) }, lp())
         header.addView(View(context), LayoutParams(0, 1, 1f))
-        if (!showSnippets) header.addView(headerButton(context, t, "Clear") { clearAll() }, LayoutParams(-2, -1))
+        if (!showSnippets) header.addView(pillButton(context, t, "Clear") { clearAll() }, lp())
         list.removeAllViews()
         val cols = Settings.int("clip_columns")
         val gap = context.dp(Settings.int("clip_card_gap"))
@@ -121,7 +132,7 @@ class EmojiPanel(ctx: Context, private val onEmoji: (String) -> Unit, private va
     private val probe = Paint()
     private var cur = 1
 
-    init { orientation = VERTICAL; addView(tabs, LayoutParams(-1, ctx.dp(40))); addView(scroll, LayoutParams(-1, 0, 1f)) }
+    init { orientation = VERTICAL; addView(tabs, LayoutParams(-1, ctx.dp(44))); addView(scroll, LayoutParams(-1, 0, 1f)) }
 
     private fun recent(): List<String> = Settings.sp.getString("emoji_recent_list", "")!!.split(' ').filter { it.isNotEmpty() }
 
@@ -133,14 +144,17 @@ class EmojiPanel(ctx: Context, private val onEmoji: (String) -> Unit, private va
     fun refresh(t: Theme) {
         setBackgroundColor(t.bg)
         tabs.removeAllViews()
-        tabs.addView(headerButton(context, t, "ABC") { onBack() }, LayoutParams(-2, -1))
+        tabs.setPadding(context.dp(6), context.dp(6), context.dp(6), context.dp(6))
+        tabs.addView(pillButton(context, t, "ABC", key = true) { onBack() }, LayoutParams(-2, context.dp(32)).apply { marginEnd = context.dp(4) })
         cats.forEachIndexed { i, c ->
             tabs.addView(TextView(context).apply {
-                text = c.first; textSize = 18f; gravity = Gravity.CENTER; alpha = if (i == cur) 1f else 0.5f
+                text = c.first; textSize = 17f; gravity = Gravity.CENTER; isFocusable = false
+                background = if (i == cur) roundBg(Ok.mix(t.bg, t.accent, 0.30f), context.dp(16).toFloat()) else null
                 setOnClickListener { cur = i; refresh(t) }
-            }, LayoutParams(0, -1, 1f))
+            }, LayoutParams(0, context.dp(32), 1f).apply { setMargins(context.dp(2), 0, context.dp(2), 0) })
         }
-        tabs.addView(headerButton(context, t, "⌫") { onDelete() }, LayoutParams(-2, -1))
+        tabs.addView(IconView(context, "del", t.textSpecial) { onDelete() }.apply { background = roundBg(t.special, context.dp(16).toFloat()) },
+            LayoutParams(context.dp(46), context.dp(32)).apply { marginStart = context.dp(4) })
         grid.removeAllViews()
         val items = if (cats[cur].second == null) recent() else cats[cur].second!!.flatMap { r -> r.map { String(Character.toChars(it)) } }.filter { Build_hasGlyph(it) }
         val cols = Settings.int("emoji_cols"); val size = Settings.int("emoji_size").toFloat()
