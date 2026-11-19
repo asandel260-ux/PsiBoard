@@ -16,7 +16,8 @@ class ChoiceS(key: String, title: String, section: String, val options: List<Str
 class TextS(key: String, title: String, section: String, val def: String, val multiline: Boolean = false, hint: String = "") : S(key, title, section, hint)
 
 object Settings {
-    private const val A = "Appearance: colors"
+    private const val A0 = "Theme"
+    private const val A = "Color overrides (advanced)"
     private const val B = "Appearance: shape & size"
     private const val C = "Layout"
     private const val D = "Typing"
@@ -26,13 +27,19 @@ object Settings {
     private const val H = "Languages & layouts"
     private const val I = "Toolbar"
 
-    val fonts = listOf("sans", "sans-bold", "serif", "mono", "italic", "light", "condensed")
+    val fonts = listOf("auto", "sans", "sans-medium", "sans-bold", "light", "condensed", "serif", "mono", "italic", "vazirmatn")
     val caseModes = listOf("auto", "lower", "upper")
     val swipeActions = listOf("none", "cursor", "delete-word")
     val langs = listOf("en", "fa")
 
     val all: List<S> = listOf(
-        ChoiceS("preset", "Theme preset (applies colors and key shape)", A, Presets.names(), "Midnight"),
+        ChoiceS("preset", "Theme preset", A0, Presets.names(), "Default"),
+        ChoiceS("theme_mode", "Light / dark", A0, listOf("auto", "dark", "light"), "auto"),
+        SwitchS("dynamic_color", "Use wallpaper colors (Material You, Android 12+)", A0, false),
+        ColorS("seed_color", "Theme color (seed)", A0, 0xFF7B8CFF.toInt()),
+        SliderS("tint", "Surface tint strength", A0, 0, 200, 100, "%", "How much of the theme color tints the grey surfaces"),
+        SliderS("contrast", "Key vs background contrast", A0, 0, 100, 50, "%", "Text always keeps at least WCAG 4.5:1 contrast"),
+        SwitchS("amoled", "True black background (dark mode)", A0, false),
         ColorS("c_bg", "Keyboard background", A, 0xFF14141A.toInt()),
         SwitchS("bg_gradient", "Background gradient", A, true),
         ColorS("c_bg2", "Gradient end color", A, 0xFF0C0C11.toInt()),
@@ -55,13 +62,13 @@ object Settings {
         ColorS("c_strip_icon", "Toolbar icons", A, 0xFFB4B6C8.toInt()),
         ColorS("c_nav", "Navigation bar tint (bottom padding)", A, 0xFF14141A.toInt()),
 
-        SliderS("key_height", "Key height", B, 36, 80, 50, "dp"),
+        SliderS("key_height", "Row height", B, 36, 80, 48, "dp", "48dp = Material's minimum touch target (about 9 mm)"),
         SliderS("key_gap_h", "Horizontal gap between keys", B, 0, 14, 3, "dp"),
-        SliderS("key_gap_v", "Vertical gap between rows", B, 0, 14, 6, "dp"),
+        SliderS("key_gap_v", "Vertical gap between rows", B, 0, 14, 7, "dp"),
         SliderS("key_radius", "Key corner radius", B, 0, 30, 9, "dp"),
         SliderS("key_border_w", "Key border width", B, 0, 6, 0, "dp"),
-        SliderS("key_highlight", "Key top-edge highlight", B, 0, 100, 45, "%"),
-        SliderS("key_shadow", "Key shadow offset", B, 0, 6, 1, "dp"),
+        SliderS("key_highlight", "Key top-edge highlight", B, -1, 100, -1, "%", "Leftmost position = Auto (adapts to light / dark)"),
+        SliderS("key_shadow", "Key shadow offset", B, -1, 6, -1, "dp", "Leftmost position = Auto (shadow in light mode, none in dark)"),
         SliderS("text_size", "Key text size", B, 12, 34, 21, "sp"),
         SliderS("special_text_size", "Special key text size", B, 10, 28, 14, "sp"),
         SliderS("hint_size", "Hint text size", B, 6, 16, 9, "sp"),
@@ -71,12 +78,14 @@ object Settings {
         SliderS("side_pad", "Side padding", B, 0, 24, 3, "dp"),
         SliderS("bottom_pad", "Bottom padding", B, 0, 60, 6, "dp"),
         SliderS("top_pad", "Top padding", B, 0, 20, 4, "dp"),
-        ChoiceS("font", "Key font", B, fonts, "sans"),
+        ChoiceS("font_en", "Latin key font", B, fonts, "auto"),
+        ChoiceS("font_fa", "Persian key font", B, fonts, "auto"),
+        SliderS("fa_text_scale", "Persian text size", B, 70, 130, 92, "%"),
         ChoiceS("label_case", "Letter case on keys", B, caseModes, "auto"),
         SwitchS("show_hints", "Show long-press hints on keys", B, true),
         SwitchS("key_preview", "Key preview bubble", B, true),
         SliderS("preview_size", "Preview bubble size", B, 36, 100, 56, "dp"),
-        SliderS("popup_radius", "Popup corner radius", B, 0, 24, 10, "dp"),
+        SliderS("popup_radius", "Popup corner radius", B, 0, 24, 12, "dp"),
 
         SliderS("height_scale", "Overall keyboard height scale", C, 60, 160, 100, "%"),
         SwitchS("number_row", "Number row", C, true),
@@ -98,6 +107,7 @@ object Settings {
         SwitchS("shift_cursor_select", "Hold shift + swipe space = select text", D, true),
         ChoiceS("space_swipe", "Swipe on space bar", D, swipeActions, "cursor"),
         ChoiceS("delete_swipe", "Swipe left on delete", D, swipeActions, "delete-word"),
+        SliderS("touch_y_offset", "Touch point correction (up)", D, -8, 12, 2, "dp", "Fingers land slightly below the intended key (Henze et al.); this shifts where a tap is read"),
         SliderS("longpress_ms", "Long-press delay", D, 150, 800, 300, "ms"),
         SliderS("repeat_start_ms", "Key repeat start delay", D, 100, 800, 350, "ms"),
         SliderS("repeat_ms", "Key repeat interval", D, 15, 150, 45, "ms"),
@@ -108,6 +118,7 @@ object Settings {
         TextS("long_press_extra", "Extra long-press symbols for letters (letter=chars per line)", D, "", true, "Example:\na=àáâä\ne=éèê"),
 
         SwitchS("haptic", "Vibrate on key press", E, true),
+        ChoiceS("haptic_style", "Haptic style", E, listOf("system", "custom"), "system"),
         SliderS("haptic_ms", "Vibration strength/length", E, 1, 40, 12, "ms"),
         SwitchS("haptic_longpress", "Vibrate on long-press", E, true),
         SwitchS("sound", "Sound on key press", E, false),
@@ -118,8 +129,8 @@ object Settings {
         SliderS("suggest_count", "Number of suggestions", F, 1, 5, 3),
         SwitchS("learn_words", "Learn new words", F, true),
         SwitchS("next_word", "Next-word suggestions (from your history)", F, true),
-        SliderS("strip_height", "Suggestion/toolbar strip height", F, 32, 64, 42, "dp"),
-        SliderS("strip_text_size", "Suggestion text size", F, 11, 24, 16, "sp"),
+        SliderS("strip_height", "Suggestion/toolbar strip height", F, 32, 64, 40, "dp"),
+        SliderS("strip_text_size", "Suggestion text size", F, 11, 24, 17, "sp"),
         TextS("shortcuts", "Text shortcuts (trigger=expansion per line)", F, "omw=on my way\nbrb=be right back", true),
         SwitchS("expand_shortcuts", "Expand text shortcuts on space", F, true),
 
@@ -179,11 +190,22 @@ object Settings {
     private val byKey = all.associateBy { it.key }
     val keys: Set<String> = byKey.keys
     lateinit var sp: SharedPreferences
-    fun init(c: Context) { if (!::sp.isInitialized) sp = c.applicationContext.getSharedPreferences("psiboard", Context.MODE_PRIVATE) }
+    fun init(c: Context) {
+        if (!::sp.isInitialized) { sp = c.applicationContext.getSharedPreferences("psiboard", Context.MODE_PRIVATE); refreshDerived(c) }
+    }
+
+    /** Colours generated by the theme engine; a colour the user set explicitly overrides its generated value. */
+    var derived: Map<String, Int> = emptyMap(); private set
+    var isDark = true; private set
+    fun refreshDerived(ctx: Context) {
+        isDark = when (str("theme_mode")) { "dark" -> true; "light" -> false; else -> Palette.isNight(ctx) }
+        val s = Palette.seed(ctx)
+        derived = Palette.build(isDark, s[0], s[1], int("tint") / 100f, bool("amoled"), int("contrast") / 100f)
+    }
 
     fun bool(k: String): Boolean = sp.getBoolean(k, (byKey[k] as SwitchS).def)
     fun int(k: String): Int = when (val s = byKey[k]) {
-        is ColorS -> sp.getInt(k, s.def)
+        is ColorS -> if (sp.contains(k)) sp.getInt(k, s.def) else (derived[k] ?: s.def)
         is SliderS -> sp.getInt(k, s.def)
         else -> error("not int: $k")
     }
@@ -214,45 +236,36 @@ object Settings {
 }
 
 object Presets {
-    private val p = linkedMapOf<String, Map<String, Long>>(
-        "Midnight" to emptyMap(),
-        "Graphite" to mapOf("c_bg" to 0xFF1A1A1C, "c_bg2" to 0xFF111112, "c_key" to 0xFF2E2E31, "c_key_pressed" to 0xFF58585E, "c_special" to 0xFF222225,
-            "c_special_pressed" to 0xFF45454A, "c_accent" to 0xFFFF9F43, "c_popup_sel" to 0xFFFF9F43),
-        "Ocean" to mapOf("c_bg" to 0xFF0D1A25, "c_bg2" to 0xFF08111A, "c_key" to 0xFF1B3144, "c_key_pressed" to 0xFF2F5878, "c_special" to 0xFF132535,
-            "c_special_pressed" to 0xFF26465F, "c_accent" to 0xFF38BDF8, "c_popup_sel" to 0xFF38BDF8, "c_text_accent" to 0xFF04202E),
-        "Sakura" to mapOf("c_bg" to 0xFF22171E, "c_bg2" to 0xFF170F14, "c_key" to 0xFF3A2632, "c_key_pressed" to 0xFF6B4259, "c_special" to 0xFF2C1C26,
-            "c_special_pressed" to 0xFF553449, "c_accent" to 0xFFFF7EB6, "c_popup_sel" to 0xFFFF7EB6, "c_text_accent" to 0xFF3A0D22),
-        "Mint" to mapOf("c_bg" to 0xFF0E1C19, "c_bg2" to 0xFF08120F, "c_key" to 0xFF1D3531, "c_key_pressed" to 0xFF2F5C52, "c_special" to 0xFF152A26,
-            "c_special_pressed" to 0xFF264A42, "c_accent" to 0xFF34D399, "c_popup_sel" to 0xFF34D399, "c_text_accent" to 0xFF04271B),
-        "Light" to mapOf("c_bg" to 0xFFE6E8EF, "c_bg2" to 0xFFD9DCE6, "c_key" to 0xFFFFFFFF, "c_key_pressed" to 0xFFC3C8D8, "c_special" to 0xFFC9CDDA,
-            "c_special_pressed" to 0xFFADB3C6, "c_accent" to 0xFF4F6BFF, "c_text" to 0xFF1B1C24, "c_text_special" to 0xFF3C3E4D, "c_hint" to 0xFF8B90A0,
-            "c_popup_bg" to 0xFFFFFFFF, "c_popup_text" to 0xFF1B1C24, "c_strip_text" to 0xFF1B1C24, "c_strip_icon" to 0xFF3C3E4D, "c_shadow" to 0x30000000,
-            "c_clip_card" to 0xFFFFFFFF, "c_clip_text" to 0xFF1B1C24, "c_popup_sel" to 0xFF4F6BFF, "key_highlight" to 0L),
-        "AMOLED" to mapOf("c_bg" to 0xFF000000, "c_bg2" to 0xFF000000, "c_key" to 0xFF141417, "c_key_pressed" to 0xFF3A3B4C, "c_special" to 0xFF0B0B0D,
-            "c_special_pressed" to 0xFF2A2B38, "c_shadow" to 0x00000000, "key_shadow" to 0L),
-        "Flat" to mapOf("key_radius" to 3L, "key_shadow" to 0L, "key_highlight" to 0L, "key_gap_h" to 2L, "key_gap_v" to 2L, "c_shadow" to 0x00000000),
-        "Bubble" to mapOf("key_radius" to 24L, "key_gap_h" to 5L, "key_gap_v" to 8L, "key_height" to 52L, "key_highlight" to 70L)
+    /** seed = theme color (null = keep current), mode, wallpaper colors, amoled, tint %, shape overrides */
+    private class P(val seed: Long? = null, val mode: String? = null, val dyn: Boolean? = null, val amoled: Boolean = false,
+                    val tint: Int = 100, val shape: Map<String, Int> = emptyMap())
+    private val indigo = 0xFF7B8CFFL
+    private val p = linkedMapOf(
+        "Default" to P(indigo, "auto", false),
+        "Material You" to P(indigo, "auto", true),
+        "Midnight" to P(indigo, "dark", false),
+        "Daylight" to P(indigo, "light", false),
+        "AMOLED" to P(indigo, "dark", false, true),
+        "Ocean" to P(0xFF38BDF8, "dark", false),
+        "Sakura" to P(0xFFFF7EB6, "dark", false),
+        "Mint" to P(0xFF34D399, "dark", false),
+        "Amber" to P(0xFFFFB454, "dark", false),
+        "Graphite" to P(0xFFFF9F43, "dark", false, false, 0),
+        "Flat (shape)" to P(shape = mapOf("key_radius" to 4, "key_shadow" to 0, "key_highlight" to 0, "key_gap_h" to 2, "key_gap_v" to 3)),
+        "Bubble (shape)" to P(shape = mapOf("key_radius" to 22, "key_gap_h" to 5, "key_gap_v" to 9, "key_height" to 50, "key_highlight" to 55))
     )
     private val shapeKeys = listOf("key_radius", "key_shadow", "key_highlight", "key_gap_h", "key_gap_v", "key_height", "key_border_w")
-    private fun mix(a: Int, b: Int, f: Float) = android.graphics.Color.rgb(
-        (android.graphics.Color.red(a) * (1 - f) + android.graphics.Color.red(b) * f).toInt(),
-        (android.graphics.Color.green(a) * (1 - f) + android.graphics.Color.green(b) * f).toInt(),
-        (android.graphics.Color.blue(a) * (1 - f) + android.graphics.Color.blue(b) * f).toInt()) or (0xFF shl 24)
 
     fun names() = p.keys.toList()
     fun apply(name: String) {
+        val pr = p[name] ?: return
         val e = Settings.sp.edit()
-        for (s in Settings.all) if (s is ColorS || s.key in shapeKeys) e.remove(s.key)
-        val m = HashMap(p[name] ?: emptyMap())
-        val bg = m["c_bg"]?.toInt()
-        if (bg != null) {
-            m.putIfAbsent("c_strip_bg", bg.toLong() and 0xFFFFFFFFL); m.putIfAbsent("c_nav", bg.toLong() and 0xFFFFFFFFL)
-            m["c_key"]?.toInt()?.let { k ->
-                m.putIfAbsent("c_clip_card", k.toLong() and 0xFFFFFFFFL)
-                if (!m.containsKey("c_popup_bg")) m["c_popup_bg"] = mix(k, 0xFFFFFFFF.toInt(), 0.1f).toLong() and 0xFFFFFFFFL
-            }
-        }
-        m.forEach { (k, v) -> e.putInt(k, v.toInt()) }
+        for (s in Settings.all) if ((s is ColorS && s.key != "seed_color") || s.key in shapeKeys) e.remove(s.key)
+        pr.seed?.let { e.putInt("seed_color", it.toInt()) }
+        pr.mode?.let { e.putString("theme_mode", it) }
+        pr.dyn?.let { e.putBoolean("dynamic_color", it) }
+        if (pr.seed != null) { e.putBoolean("amoled", pr.amoled); e.putInt("tint", pr.tint) }
+        pr.shape.forEach { (k, v) -> e.putInt(k, v) }
         e.apply()
     }
 }

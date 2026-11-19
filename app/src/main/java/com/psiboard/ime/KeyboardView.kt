@@ -6,10 +6,12 @@ import android.media.AudioManager
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.util.SparseArray
 import android.view.Gravity
+import android.view.HapticFeedbackConstants
 import android.view.MotionEvent
 import android.view.View
 import android.widget.PopupWindow
@@ -17,16 +19,45 @@ import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
 
+/** Key-cap fonts. Persian defaults to Vazirmatn (monolinear UI face, bundled at build time) when present. */
+object Fonts {
+    private var vz: Typeface? = null
+    private var tried = false
+    private val medium: Typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
+    private fun vazir(ctx: Context): Typeface? {
+        if (!tried) {
+            tried = true
+            vz = try { Typeface.createFromAsset(ctx.assets, "fonts/Vazirmatn-Medium.ttf") } catch (_: Exception) { null }
+            android.util.Log.i("psiboard", if (vz != null) "font: Vazirmatn loaded" else "font: Vazirmatn asset missing, using system font")
+        }
+        return vz
+    }
+    fun resolve(ctx: Context, key: String, fa: Boolean): Typeface = when (key) {
+        "sans" -> Typeface.create("sans-serif", Typeface.NORMAL)
+        "sans-medium" -> medium
+        "sans-bold" -> Typeface.create("sans-serif", Typeface.BOLD)
+        "light" -> Typeface.create("sans-serif-light", Typeface.NORMAL)
+        "condensed" -> Typeface.create("sans-serif-condensed", Typeface.NORMAL)
+        "serif" -> Typeface.SERIF
+        "mono" -> Typeface.MONOSPACE
+        "italic" -> Typeface.create("sans-serif", Typeface.ITALIC)
+        "vazirmatn" -> vazir(ctx) ?: medium
+        else -> if (fa) (vazir(ctx) ?: medium) else medium
+    }
+}
+
 /** Snapshot of every visual setting, pre-scaled to pixels. Rebuilt whenever a setting changes. */
 class Theme(ctx: Context) {
-    private val d = ctx.resources.displayMetrics.density
-    val dens = d
+    init { Settings.refreshDerived(ctx) }
+
+    val dens = ctx.resources.displayMetrics.density
+    private val d = dens
     private val sd = ctx.resources.displayMetrics.scaledDensity
     private fun dp(k: String) = Settings.int(k) * d
     private fun sp(k: String) = Settings.int(k) * sd
     private fun a(color: Int, pct: Int) = Color.argb((Color.alpha(color) * pct / 100f).toInt(), Color.red(color), Color.green(color), Color.blue(color))
 
-    val highlight = Settings.int("key_highlight")
+    val dark = Settings.isDark
     val keyOp = Settings.int("key_opacity")
     val bg = a(Settings.int("c_bg"), Settings.int("kb_opacity"))
     val bg2 = a(Settings.int("c_bg2"), Settings.int("kb_opacity"))
@@ -50,12 +81,13 @@ class Theme(ctx: Context) {
     val stripIcon = Settings.int("c_strip_icon")
     val nav = Settings.int("c_nav")
 
+    val highlight = Settings.int("key_highlight").let { if (it < 0) (if (dark) 26 else 0) else it }
+    val shadowOff = Settings.int("key_shadow").let { if (it < 0) (if (dark) 0f else 1.2f * d) else it * d }
     val keyH = dp("key_height")
     val gapH = dp("key_gap_h")
     val gapV = dp("key_gap_v")
     val radius = dp("key_radius")
     val borderW = dp("key_border_w")
-    val shadowOff = dp("key_shadow")
     val textSize = sp("text_size")
     val specialSize = sp("special_text_size")
     val hintSize = sp("hint_size")
@@ -78,29 +110,28 @@ class Theme(ctx: Context) {
     val swipeStep = Settings.int("swipe_step") * d / 2f
     val spaceSwipe = Settings.str("space_swipe")
     val deleteSwipe = Settings.str("delete_swipe")
+    val touchY = Settings.int("touch_y_offset") * d
     val stripH = dp("strip_height")
     val stripTextSize = sp("strip_text_size")
     val showSpaceLabel = Settings.bool("show_space_label")
-    val typeface: Typeface = when (Settings.str("font")) {
-        "sans-bold" -> Typeface.create("sans-serif", Typeface.BOLD)
-        "serif" -> Typeface.SERIF
-        "mono" -> Typeface.MONOSPACE
-        "italic" -> Typeface.create("sans-serif", Typeface.ITALIC)
-        "light" -> Typeface.create("sans-serif-light", Typeface.NORMAL)
-        "condensed" -> Typeface.create("sans-serif-condensed", Typeface.NORMAL)
-        else -> Typeface.create("sans-serif", Typeface.NORMAL)
-    }
+    val enTf: Typeface = Fonts.resolve(ctx, Settings.str("font_en"), false)
+    val faTf: Typeface = Fonts.resolve(ctx, Settings.str("font_fa"), true)
+    val faScale = Settings.int("fa_text_scale") / 100f
 }
 
 class Feedback(private val ctx: Context) {
     private val vib = ctx.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator?
     private val am = ctx.getSystemService(Context.AUDIO_SERVICE) as AudioManager
-    fun tick(longPress: Boolean = false) {
+    fun tick(v: View, longPress: Boolean = false) {
         if (Settings.bool("haptic") && (!longPress || Settings.bool("haptic_longpress"))) {
-            val ms = Settings.int("haptic_ms").toLong()
-            try {
-                if (Build.VERSION.SDK_INT >= 26) vib?.vibrate(VibrationEffect.createOneShot(ms, VibrationEffect.DEFAULT_AMPLITUDE)) else @Suppress("DEPRECATION") vib?.vibrate(ms)
-            } catch (_: Exception) {}
+            if (Settings.str("haptic_style") == "system") {
+                v.performHapticFeedback(if (longPress) HapticFeedbackConstants.LONG_PRESS else HapticFeedbackConstants.KEYBOARD_TAP)
+            } else {
+                val ms = Settings.int("haptic_ms").toLong()
+                try {
+                    if (Build.VERSION.SDK_INT >= 26) vib?.vibrate(VibrationEffect.createOneShot(ms, VibrationEffect.DEFAULT_AMPLITUDE)) else @Suppress("DEPRECATION") vib?.vibrate(ms)
+                } catch (_: Exception) {}
+            }
         }
         if (Settings.bool("sound")) am.playSoundEffect(AudioManager.FX_KEYPRESS_STANDARD, Settings.int("sound_vol") / 100f)
     }
@@ -120,19 +151,28 @@ class PopupView(ctx: Context) : View(ctx) {
     var sel = -1
     var itemW = 0f
     var itemH = 0f
+    var fa = false
     private val p = Paint(Paint.ANTI_ALIAS_FLAG)
     private val r = RectF()
+    private val refB = Rect()
     override fun onMeasure(w: Int, h: Int) = setMeasuredDimension((itemW * items.size).toInt(), itemH.toInt())
     override fun onDraw(c: Canvas) {
         val t = th ?: return
+        val pad = 3f * t.dens
         p.style = Paint.Style.FILL; p.color = t.popupBg
         r.set(0f, 0f, width.toFloat(), height.toFloat())
         c.drawRoundRect(r, t.popupRadius, t.popupRadius, p)
-        p.textAlign = Paint.Align.CENTER; p.typeface = t.typeface; p.textSize = t.textSize * 1.3f
+        p.style = Paint.Style.STROKE; p.strokeWidth = t.dens; p.color = Ok.mix(t.popupBg, t.popupText, 0.22f)
+        r.inset(t.dens / 2, t.dens / 2); c.drawRoundRect(r, t.popupRadius, t.popupRadius, p)
+        p.style = Paint.Style.FILL
+        p.textAlign = Paint.Align.CENTER; p.typeface = if (fa) t.faTf else t.enTf; p.textSize = t.textSize * 1.25f * (if (fa) t.faScale else 1f)
+        val ref = if (fa) "اسب" else "Hx"
+        p.getTextBounds(ref, 0, ref.length, refB)
+        val base = height / 2f - (refB.top + refB.bottom) / 2f
         for (i in items.indices) {
-            if (i == sel) { p.color = t.popupSel; r.set(i * itemW + 3, 3f, (i + 1) * itemW - 3, height - 3f); c.drawRoundRect(r, t.popupRadius, t.popupRadius, p) }
-            p.color = t.popupText
-            c.drawText(items[i], i * itemW + itemW / 2, height / 2f - (p.ascent() + p.descent()) / 2, p)
+            if (i == sel) { p.color = t.popupSel; r.set(i * itemW + pad, pad, (i + 1) * itemW - pad, height - pad); c.drawRoundRect(r, max(0f, t.popupRadius - pad), max(0f, t.popupRadius - pad), p) }
+            p.color = if (i == sel) t.textAccent else t.popupText
+            c.drawText(items[i], i * itemW + itemW / 2, base, p)
         }
     }
 }
@@ -148,14 +188,18 @@ class KeyboardView(ctx: Context) : View(ctx) {
     var abcLabel = "ABC"
     var enterLabel: String? = null
     var isLandscape = false
+    var lang = "en"
 
     private val feedback = Feedback(ctx)
     private val h = Handler(Looper.getMainLooper())
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val ip = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeCap = Paint.Cap.ROUND; strokeJoin = Paint.Join.ROUND }
     private val rect = RectF()
+    private val rect2 = RectF()
+    private val refB = Rect()
     private val path = Path()
     private val allKeys = ArrayList<Key>()
+    private var animating = false
 
     private class P(val id: Int) {
         var key: Key? = null; var downX = 0f; var lastX = 0f; var swiped = false
@@ -174,8 +218,8 @@ class KeyboardView(ctx: Context) : View(ctx) {
     private fun scale() = if (isLandscape) th.landScale else th.heightScale
 
     override fun onMeasure(wSpec: Int, hSpec: Int) {
-        val hh = th.topPad + th.bottomPad + rows.sumOf { (it.firstOrNull()?.hScale ?: 1f).toDouble() }.toFloat() * th.keyH * scale()
-        setMeasuredDimension(MeasureSpec.getSize(wSpec), hh.toInt())
+        val units = rows.sumOf { (it.firstOrNull()?.hScale ?: 1f).toDouble() }.toFloat()
+        setMeasuredDimension(MeasureSpec.getSize(wSpec), (th.topPad + th.bottomPad + units * th.keyH * scale()).toInt())
     }
     override fun onSizeChanged(w: Int, h: Int, ow: Int, oh: Int) { layoutKeys() }
 
@@ -210,39 +254,45 @@ class KeyboardView(ctx: Context) : View(ctx) {
         if (t.gradient) paint.shader = LinearGradient(0f, 0f, 0f, height.toFloat(), t.bg, t.bg2, Shader.TileMode.CLAMP) else { paint.shader = null; paint.color = t.bg }
         c.drawRect(0f, 0f, width.toFloat(), height.toFloat(), paint)
         paint.shader = null
-        for (k in allKeys) drawKey(c, k)
+        animating = false
+        val now = SystemClock.uptimeMillis()
+        for (k in allKeys) drawKey(c, k, now)
+        if (animating) postInvalidateOnAnimation()
     }
 
-    private val rect2 = RectF()
-    private fun mix(a: Int, b: Int, f: Float) = Color.argb(
-        (Color.alpha(a) + (Color.alpha(b) - Color.alpha(a)) * f).toInt(), (Color.red(a) + (Color.red(b) - Color.red(a)) * f).toInt(),
-        (Color.green(a) + (Color.green(b) - Color.green(a)) * f).toInt(), (Color.blue(a) + (Color.blue(b) - Color.blue(a)) * f).toInt())
+    /** 1 while held, easing back to 0 over 150 ms after release: the press state fades instead of snapping. */
+    private fun pressAmt(k: Key, now: Long): Float {
+        if (k.pressed) return 1f
+        val dt = now - k.releaseAt
+        if (dt >= 150L || k.releaseAt == 0L) return 0f
+        animating = true
+        val f = 1f - dt / 150f
+        return f * f
+    }
 
-    private fun drawKey(c: Canvas, k: Key) {
+    private fun drawKey(c: Canvas, k: Key, now: Long) {
         val t = th
         rect.set(k.x + t.gapH / 2, k.y + t.gapV / 2, k.x + k.w - t.gapH / 2, k.y + k.h - t.gapV / 2)
         val minSide = min(rect.width(), rect.height())
         val rad = min(t.radius, minSide * 0.34f)
         val enter = k.token == "{enter}"
-        if (t.shadowOff > 0 && !k.pressed) {
+        val amt = pressAmt(k, now)
+        if (t.shadowOff > 0 && amt < 0.5f) {
             paint.style = Paint.Style.FILL; paint.color = t.shadow
             rect.offset(0f, t.shadowOff); c.drawRoundRect(rect, rad, rad, paint); rect.offset(0f, -t.shadowOff)
         }
+        val base = if (enter) t.accent else if (k.special) t.special else t.key
+        val down = if (enter) Ok.mix(t.accent, Color.BLACK, 0.22f) else if (k.special) t.specialP else t.keyP
         paint.style = Paint.Style.FILL
-        paint.color = when {
-            k.pressed && enter -> mix(t.accent, Color.BLACK, 0.25f)
-            k.pressed -> if (k.special) t.specialP else t.keyP
-            enter -> t.accent
-            k.special -> t.special
-            else -> t.key
-        }
+        paint.color = if (amt > 0f) Ok.mix(base, down, amt) else base
         c.drawRoundRect(rect, rad, rad, paint)
-        if (t.highlight > 0 && !k.pressed) {
-            // thin light edge along the top of the key = tactile depth
+        if (t.highlight > 0 && amt < 0.5f) {
+            // thin light edge along the top of the key = tactile depth (light from above)
             val hw = 1.2f * t.dens
             c.save(); c.clipRect(rect.left, rect.top, rect.right, rect.top + rad * 0.9f + hw)
             rect2.set(rect); rect2.inset(hw / 2, hw / 2)
-            paint.style = Paint.Style.STROKE; paint.strokeWidth = hw; paint.color = Color.argb((t.highlight * 0.45f * 2.55f).toInt().coerceIn(0, 255), 255, 255, 255)
+            paint.style = Paint.Style.STROKE; paint.strokeWidth = hw
+            paint.color = Color.argb((t.highlight * 0.45f * 2.55f * (1f - amt * 2f)).toInt().coerceIn(0, 255), 255, 255, 255)
             c.drawRoundRect(rect2, rad, rad, paint); c.restore()
         }
         if (t.borderW > 0 && Color.alpha(t.border) > 0) {
@@ -251,42 +301,52 @@ class KeyboardView(ctx: Context) : View(ctx) {
         }
         val cx = rect.centerX(); val cy = rect.centerY()
         val fg = if (enter) t.textAccent else if (k.special) t.textSpecial else t.text
-        paint.style = Paint.Style.FILL; paint.color = fg; paint.typeface = t.typeface; paint.textAlign = Paint.Align.CENTER
-        ip.color = fg; ip.strokeWidth = max(2f, minSide * 0.055f)
-        val s = minSide * 0.2f
+        val fa = lang == "fa"
+        val tscale = if (fa) t.faScale else 1f
+        paint.style = Paint.Style.FILL; paint.color = fg; paint.typeface = if (fa) t.faTf else t.enTf; paint.textAlign = Paint.Align.CENTER
+        ip.color = fg; ip.strokeWidth = max(1.6f * t.dens, 2f * t.dens * 0.92f)
+        val s = min(9.5f * t.dens, minSide * 0.3f)
         when (k.token) {
             "{shift}" -> Glyphs.draw(c, if (shift == 2) "caps" else if (shift == 1) "shift_on" else "shift", cx, cy, s, ip, rect2, path)
             "{del}" -> Glyphs.draw(c, "del", cx, cy, s, ip, rect2, path)
+            "{zwnj}" -> Glyphs.draw(c, "zwnj", cx, cy, s, ip, rect2, path)
             "{enter}" -> if (enterLabel != null) label(c, enterLabel!!, cx, cy, t.specialSize, rect.width()) else Glyphs.draw(c, "enter", cx, cy, s, ip, rect2, path)
-            "{emoji}" -> Glyphs.draw(c, "emoji", cx, cy, s * 1.1f, ip, rect2, path)
-            "{lang}" -> Glyphs.draw(c, "globe", cx, cy, s * 1.1f, ip, rect2, path)
-            "{space}" -> if (t.showSpaceLabel) { paint.color = t.hint; label(c, spaceLabel, cx, cy, t.specialSize * 0.9f, rect.width()) }
-            "{sym}" -> label(c, symLabel, cx, cy, t.specialSize * 0.95f, rect.width())
+            "{emoji}" -> Glyphs.draw(c, "emoji", cx, cy, s * 1.05f, ip, rect2, path)
+            "{lang}" -> Glyphs.draw(c, "globe", cx, cy, s * 1.05f, ip, rect2, path)
+            "{space}" -> if (t.showSpaceLabel) { paint.color = t.hint; label(c, spaceLabel, cx, cy, t.specialSize * 0.9f * tscale, rect.width()) }
+            "{sym}" -> label(c, symLabel, cx, cy, t.specialSize * 0.95f * tscale, rect.width())
             "{sym2}" -> label(c, "=\\<", cx, cy, t.specialSize, rect.width())
-            "{abc}" -> label(c, abcLabel, cx, cy, t.specialSize * 0.95f, rect.width())
+            "{abc}" -> label(c, abcLabel, cx, cy, t.specialSize * 0.95f * tscale, rect.width())
             else -> {
                 val numRow = k.hScale < 1f
                 if (numRow) paint.color = t.textSpecial
                 val punct = k.label.length == 1 && !k.label[0].isLetterOrDigit()
-                label(c, caseOf(k.label), cx, cy, t.textSize * (if (numRow) 0.8f else if (punct) 1.2f else 1f), rect.width())
+                label(c, caseOf(k.label), cx, cy, t.textSize * tscale * (if (numRow) 0.82f else if (punct) 1.15f else 1f), rect.width())
                 if (t.showHints && k.hint != null) {
-                    paint.color = t.hint; paint.textSize = t.hintSize; paint.textAlign = Paint.Align.RIGHT
-                    c.drawText(k.hint!!, rect.right - t.hintSize * 0.55f, rect.top + t.hintSize * 1.45f, paint)
+                    paint.color = t.hint; paint.textSize = t.hintSize * tscale; paint.textAlign = Paint.Align.RIGHT
+                    c.drawText(k.hint!!, rect.right - t.hintSize * 0.55f, rect.top + t.hintSize * 1.5f, paint)
                 }
             }
         }
     }
 
+    /** Text is centred on the optical middle of a reference glyph pair, so every key's letters sit on one baseline. */
     private fun label(c: Canvas, s: String, cx: Float, cy: Float, size: Float, maxW: Float) {
         paint.textSize = size
         val w = paint.measureText(s)
-        if (w > maxW * 0.85f) paint.textSize = size * maxW * 0.85f / w
-        c.drawText(s, cx, cy - (paint.ascent() + paint.descent()) / 2, paint)
+        if (w > maxW * 0.86f) paint.textSize = size * maxW * 0.86f / w
+        val ref = if (lang == "fa") "اسب" else "Hx"
+        paint.getTextBounds(ref, 0, ref.length, refB)
+        c.drawText(s, cx, cy - (refB.top + refB.bottom) / 2f, paint)
     }
 
     // ---------------- touch ----------------
 
-    private fun keyAt(x: Float, y: Float): Key? {
+    private fun keyAt(x: Float, yRaw: Float): Key? {
+        if (allKeys.isEmpty()) return null
+        val top = rows.first()[0].y
+        val last = rows.last()[0]
+        val y = (yRaw - th.touchY).coerceIn(top, last.y + last.h - 1f)
         var best: Key? = null; var bd = Float.MAX_VALUE
         for (k in allKeys) {
             if (y < k.y || y >= k.y + k.h) continue
@@ -294,14 +354,16 @@ class KeyboardView(ctx: Context) : View(ctx) {
             val d = if (x < k.x) k.x - x else x - (k.x + k.w)
             if (d < bd) { bd = d; best = k }
         }
-        return if (bd < th.gapH + th.sidePad + 12f) best else null
+        return if (bd < th.gapH + th.sidePad + 12f * th.dens) best else null
     }
 
     private fun inval(k: Key) = invalidate(k.x.toInt() - 2, k.y.toInt() - 2, (k.x + k.w).toInt() + 2, (k.y + k.h).toInt() + 6)
 
+    private fun unpress(k: Key) { if (k.pressed) { k.pressed = false; k.releaseAt = SystemClock.uptimeMillis(); inval(k) } }
+
     private fun press(p: P, k: Key, x: Float, y: Float) {
         p.key = k; k.pressed = true; inval(k)
-        feedback.tick()
+        feedback.tick(this)
         when {
             k.token == "{del}" -> {
                 listener?.onToken("{del}")
@@ -309,14 +371,14 @@ class KeyboardView(ctx: Context) : View(ctx) {
                 h.postDelayed(p.rep!!, th.repeatStart)
             }
             !k.special -> {
-                if (th.preview && k.popups.isEmpty() || (th.preview && !p.popup)) showPreview(k)
+                if (th.preview) showPreview(k)
                 if (k.popups.isNotEmpty()) {
-                    p.lp = Runnable { p.lp = null; if (p.key === k) { feedback.tick(true); showPopup(p, k, p.lastX) } }
+                    p.lp = Runnable { p.lp = null; if (p.key === k) { feedback.tick(this, true); showPopup(p, k, p.lastX) } }
                     h.postDelayed(p.lp!!, th.longPressMs)
                 }
             }
             k.token == "{space}" || k.token == "{emoji}" || k.token == "{lang}" -> {
-                p.lp = Runnable { p.lp = null; if (p.key === k && !p.swiped) { feedback.tick(true); p.swiped = true; listener?.onToken(k.token + "_long") } }
+                p.lp = Runnable { p.lp = null; if (p.key === k && !p.swiped) { feedback.tick(this, true); p.swiped = true; listener?.onToken(k.token + "_long") } }
                 h.postDelayed(p.lp!!, th.longPressMs + 200)
             }
         }
@@ -324,7 +386,7 @@ class KeyboardView(ctx: Context) : View(ctx) {
 
     private fun release(p: P) {
         p.lp?.let { h.removeCallbacks(it) }; p.rep?.let { h.removeCallbacks(it) }; p.lp = null; p.rep = null
-        p.key?.let { it.pressed = false; inval(it) }
+        p.key?.let { unpress(it) }
         hidePopup()
     }
 
@@ -403,14 +465,14 @@ class KeyboardView(ctx: Context) : View(ctx) {
     }
 
     private fun showPreview(k: Key) {
-        val v = ensurePop(); v.th = th; v.items = listOf(caseOf(k.label)); v.sel = -1
-        v.itemW = max(th.previewSize, k.w * 0.9f); v.itemH = th.previewSize * 1.1f
+        val v = ensurePop(); v.th = th; v.fa = lang == "fa"; v.items = listOf(caseOf(k.label)); v.sel = -1
+        v.itemW = max(th.previewSize, k.w * 0.95f); v.itemH = th.previewSize * 1.1f
         v.measure(0, 0)
-        placePopup(v, k.x + k.w / 2 - v.itemW / 2, k.y - v.itemH - th.gapV)
+        placePopup(v, k.x + k.w / 2 - v.itemW / 2, k.y - v.itemH - th.gapV * 0.5f)
     }
 
     private fun showPopup(p: P, k: Key, x: Float) {
-        val v = ensurePop(); v.th = th; v.items = k.popups.map { caseOf(it) }
+        val v = ensurePop(); v.th = th; v.fa = lang == "fa"; v.items = k.popups.map { caseOf(it) }
         val n = v.items.size
         v.itemW = min(max(th.previewSize * 0.8f, k.w), width.toFloat() / n); v.itemH = th.previewSize * 1.1f
         v.measure(0, 0)
@@ -419,13 +481,13 @@ class KeyboardView(ctx: Context) : View(ctx) {
         popLeft = left; popItemW = v.itemW
         p.popup = true
         v.sel = ((x - left) / v.itemW).toInt().coerceIn(0, n - 1); p.sel = v.sel
-        placePopup(v, left, k.y - v.itemH - th.gapV)
+        placePopup(v, left, k.y - v.itemH - th.gapV * 0.5f)
     }
 
     private fun updatePopupSel(p: P, x: Float) {
         val v = popView ?: return
         val s = ((x - popLeft) / popItemW).toInt().coerceIn(0, v.items.size - 1)
-        if (s != p.sel) { p.sel = s; v.sel = s; v.invalidate(); feedback.tick(true) }
+        if (s != p.sel) { p.sel = s; v.sel = s; v.invalidate(); feedback.tick(this, true) }
     }
 
     private fun placePopup(v: PopupView, x: Float, y: Float) {

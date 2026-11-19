@@ -4,6 +4,7 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
+import android.content.res.Configuration
 import android.inputmethodservice.InputMethodService
 import android.os.Handler
 import android.os.Looper
@@ -64,6 +65,11 @@ class PsiBoardService : InputMethodService(), KbListener, SharedPreferences.OnSh
         suggester.save(); super.onDestroy()
     }
 
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+        rebuildAll()
+    }
+
     override fun onSharedPreferenceChanged(sp: SharedPreferences?, key: String?) {
         if (key != null && key !in Settings.keys) return
         ui.removeCallbacks(refreshRunnable); ui.postDelayed(refreshRunnable, 60)
@@ -94,6 +100,16 @@ class PsiBoardService : InputMethodService(), KbListener, SharedPreferences.OnSh
         kb.applyTheme(t)
         kb.isLandscape = resources.configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
         root.setBackgroundColor(t.nav)
+        try {
+            val w = window?.window
+            w?.navigationBarColor = t.nav
+            val dv = w?.decorView
+            if (dv != null && android.os.Build.VERSION.SDK_INT >= 26) {
+                @Suppress("DEPRECATION")
+                dv.systemUiVisibility = if (t.dark) dv.systemUiVisibility and View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR.inv()
+                    else dv.systemUiVisibility or View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
+            }
+        } catch (_: Exception) {}
         (strip.layoutParams as LinearLayout.LayoutParams).height = t.stripH.toInt()
         root.setPadding(0, 0, 0, 0)
         val h = (kb.measuredHeight.takeIf { it > 0 } ?: (t.keyH * 5).toInt())
@@ -110,6 +126,7 @@ class PsiBoardService : InputMethodService(), KbListener, SharedPreferences.OnSh
     private fun applyLayout() {
         val langs = enabledLangs()
         if (lang !in langs) lang = langs[0]
+        kb.lang = lang
         kb.submitRows(Layouts.build(lang, page, langs.size > 1))
         kb.spaceLabel = if (lang == "fa") "فارسی" else "English"
         kb.symLabel = if (lang == "fa") "۱۲۳" else "?123"; kb.abcLabel = if (lang == "fa") "ابج" else "ABC"
@@ -194,6 +211,7 @@ class PsiBoardService : InputMethodService(), KbListener, SharedPreferences.OnSh
                 updateShiftFromEditor()
             }
             "{space}" -> space(ic)
+            "{zwnj}" -> if (ic != null) { ic.commitText("\u200C", 1); refreshStrip() }
             "{sym}" -> { page = 1; applyLayout() }
             "{sym2}" -> { page = 2; applyLayout() }
             "{abc}" -> { page = 0; applyLayout() }
@@ -311,8 +329,12 @@ class PsiBoardService : InputMethodService(), KbListener, SharedPreferences.OnSh
     }
 
     private fun chip(text: String, t: Theme, on: () -> Unit) = TextView(this).apply {
-        this.text = text; setTextColor(t.stripText); textSize = Settings.int("strip_text_size").toFloat()
+        this.text = text; setTextColor(t.stripText)
+        val fa = lang == "fa"
+        typeface = if (fa) t.faTf else t.enTf
+        textSize = Settings.int("strip_text_size").toFloat() * (if (fa) t.faScale else 1f)
         gravity = Gravity.CENTER; maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END
+        setPadding((8 * t.dens).toInt(), 0, (8 * t.dens).toInt(), 0)
         setOnClickListener { on() }
     }
 

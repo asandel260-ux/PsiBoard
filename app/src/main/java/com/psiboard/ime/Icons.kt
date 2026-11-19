@@ -78,6 +78,14 @@ object Glyphs {
                     p.style = Paint.Style.FILL; c.drawCircle(cx + ks[i] * s, cy + ys[i] * s, s * .26f, p); p.style = Paint.Style.STROKE
                 }
             }
+            "zwnj" -> {
+                // half-space (ZWNJ): a narrow "space" bracket split in two by a short divider
+                path.reset()
+                path.moveTo(cx - s * .8f, cy - s * .4f); path.lineTo(cx - s * .8f, cy + s * .5f)
+                path.lineTo(cx + s * .8f, cy + s * .5f); path.lineTo(cx + s * .8f, cy - s * .4f)
+                c.drawPath(path, p)
+                c.drawLine(cx, cy - s * .4f, cx, cy + s * .5f, p)
+            }
             "onehand" -> {
                 c.drawLine(cx - s, cy - s * .4f, cx + s, cy - s * .4f, p); c.drawLine(cx + s * .55f, cy - s * .8f, cx + s, cy - s * .4f, p); c.drawLine(cx + s * .55f, cy, cx + s, cy - s * .4f, p)
                 c.drawLine(cx + s, cy + s * .5f, cx - s, cy + s * .5f, p); c.drawLine(cx - s * .55f, cy + s * .1f, cx - s, cy + s * .5f, p); c.drawLine(cx - s * .55f, cy + s * .9f, cx - s, cy + s * .5f, p)
@@ -87,19 +95,30 @@ object Glyphs {
     }
 }
 
+/** Toolbar button. Icon is dp-sized (≈20dp glyph, 1.9dp stroke, like Material's 24dp icons); pressed state is a soft round "state layer". */
 class IconView(ctx: Context, private val kind: String, private val tint: Int, private val onClick: () -> Unit) : View(ctx) {
+    private val d = ctx.resources.displayMetrics.density
     private val p = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = tint }
     private val r = RectF(); private val path = Path()
+    private var down = false
     init { isClickable = true; setOnClickListener { onClick() } }
 
     override fun onTouchEvent(e: MotionEvent): Boolean {
-        when (e.actionMasked) { MotionEvent.ACTION_DOWN -> alpha = 0.4f; MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> alpha = 1f }
+        when (e.actionMasked) {
+            MotionEvent.ACTION_DOWN -> { down = true; invalidate() }
+            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> { down = false; invalidate() }
+        }
         return super.onTouchEvent(e)
     }
 
     override fun onDraw(c: Canvas) {
-        val s = minOf(width, height) * 0.26f
-        p.strokeWidth = s * 0.17f; p.color = tint
-        Glyphs.draw(c, kind, width / 2f, height / 2f, s, p, r, path)
+        val cx = width / 2f; val cy = height / 2f
+        if (down) {
+            p.style = Paint.Style.FILL; p.color = (tint and 0x00FFFFFF) or 0x24000000
+            c.drawCircle(cx, cy, minOf(width, height) * 0.46f, p)
+        }
+        val s = minOf(10f * d, minOf(width, height) * 0.3f)
+        p.color = tint; p.strokeWidth = maxOf(1.4f * d, s * 0.19f)
+        Glyphs.draw(c, kind, cx, cy, s, p, r, path)
     }
 }

@@ -3,6 +3,7 @@ package com.psiboard.ime
 class Key(val label: String, val token: String, val popups: List<String>, val weight: Float, val special: Boolean) {
     var x = 0f; var y = 0f; var w = 0f; var h = 0f
     var pressed = false
+    var releaseAt = 0L
     var hScale = 1f
     var hint: String? = null
 }
@@ -13,11 +14,15 @@ class Key(val label: String, val token: String, val popups: List<String>, val we
  *   e/éèê               key 'e' with long-press popups é è ê
  *   {shift}*1.5         special key with relative width 1.5
  *   {comma} {slash} {star} {period} {pipe}   literal characters that clash with the syntax
- * Specials: {shift} {del} {enter} {space} {sym} {sym2} {abc} {lang} {emoji}
+ * Specials: {shift} {del} {enter} {space} {sym} {sym2} {abc} {lang} {emoji} {zwnj}
+ *
+ * Persian follows the ISIRI 9147 letter order. Rows 2 and 3 are both 11 units wide so their edges line up;
+ * row 1 is 12. ژ lives on long-press of ز (as on the standard Persian keyboard, where it is Shift+ز),
+ * and the left key of row 3 types the half-space (ZWNJ, U+200C) that Persian orthography needs constantly.
  */
 object Layouts {
     const val EN = "q w e r t y u i o p\na s d f g h j k l\n{shift}*1.5 z x c v b n m {del}*1.5"
-    const val FA = "ض ص ث ق ف غ ع ه خ ح ج چ\nش س ی ب ل ا ت ن م ک گ\nژ ظ ط ز ر ذ د پ و {del}*1.5"
+    const val FA = "ض ص ث ق ف غ ع ه خ ح ج چ\nش س ی ب ل ا ت ن م ک گ\n{zwnj} ظ ط ز ر ذ د پ و {del}*2"
     const val SYM = "1 2 3 4 5 6 7 8 9 0\n@ # $ _ & - + ( ) {slash}\n{sym2}*1.5 {star} \" ' : ; ! ? {del}*1.5"
     const val SYM2 = "~ ` | • √ π ÷ × ¶ ∆\n£ ¢ € ¥ ^ ° = { } \\\n{sym}*1.5 % © ® ™ ✓ [ ] < > {del}*1.5"
 
