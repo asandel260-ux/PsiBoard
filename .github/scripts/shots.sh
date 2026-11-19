@@ -7,6 +7,9 @@ OUT=shots
 mkdir -p $OUT
 adb wait-for-device
 adb install -r app/build/outputs/apk/debug/app-debug.apk
+# enable the debug intent hooks (they only run when this marker exists in the app's private folder)
+adb shell "run-as $PKG sh -c 'mkdir -p files && touch files/ci_hooks'"
+adb shell "run-as $PKG ls files" > $OUT/hooks.txt 2>&1
 adb shell settings put secure show_ime_with_hard_keyboard 1
 adb shell wm size 720x1560
 adb shell wm density 320

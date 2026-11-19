@@ -31,3 +31,14 @@ jobs:
           name: PsiBoard v${{ steps.ver.outputs.v }}
           files: PsiBoard.apk
           generate_release_notes: true
+          body: |
+            **Install:** download `PsiBoard.apk` below and open it (allow "install unknown apps" if Android asks). Then open PsiBoard and follow the two setup steps: enable it, then select it as your keyboard.
+            If Android refuses to install over an older PsiBoard, uninstall the old one first (each build is signed with a fresh debug key).
+
+            **0.4.0 - redesign**
+            - Theme engine based on OKLCH color science: light / dark / AMOLED / Material You, key labels kept at 9:1 contrast or better
+            - 48 dp row pitch, touch-point correction, key hit areas with no dead gaps
+            - Persian: Vazirmatn font, aligned rows, half-space (ZWNJ) key, ژ on long-press of ز
+            - Key preview bubbles and long-press popups, press animation, icons on the Enter key
+            - New settings screen with a live keyboard preview
+

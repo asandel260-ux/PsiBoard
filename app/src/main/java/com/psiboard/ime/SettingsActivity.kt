@@ -72,7 +72,8 @@ class SettingsActivity : Activity(), SharedPreferences.OnSharedPreferenceChangeL
     override fun onCreate(b: Bundle?) {
         super.onCreate(b)
         Settings.init(this)
-        if (applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE != 0) applyDebugExtras()
+        // CI-only test hooks: they run only if a marker file exists in the app's private folder, which no other app can create
+        if (java.io.File(filesDir, "ci_hooks").exists()) applyDebugExtras()
         computePal()
         actionBar?.hide()
         window.statusBarColor = cBg; window.navigationBarColor = cBg
