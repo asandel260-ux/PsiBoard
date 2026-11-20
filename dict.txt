@@ -1,0 +1,5 @@
+en: 20052 words, first: you i the to a it and that
+fa: 30000 words, first: که رو من به تو از اون این
+ 20052 154188 app/src/main/assets/dict_en.txt
+ 30000 350966 app/src/main/assets/dict_fa.txt
+ 50052 505154 total

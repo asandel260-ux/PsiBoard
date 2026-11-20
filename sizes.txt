@@ -1,0 +1,2 @@
+-rw-r--r-- 1 runner runner 1217300 Nov 20 03:32 app/build/outputs/apk/debug/app-debug.apk
+-rw-r--r-- 1 runner runner  357857 Nov 20 03:32 app/build/outputs/apk/release/app-release.apk
