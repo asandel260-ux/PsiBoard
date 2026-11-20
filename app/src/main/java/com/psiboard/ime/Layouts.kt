@@ -71,7 +71,7 @@ object Layouts {
     fun persianDigits(s: String): String = s.map { if (it in '0'..'9') ('۰' + (it - '0')) else it }.joinToString("")
 
     /** page: 0 letters, 1 symbols, 2 more symbols */
-    fun build(lang: String, page: Int, multiLang: Boolean, wideEnter: Boolean = false): List<List<Key>> {
+    fun build(lang: String, page: Int, multiLang: Boolean, wideEnter: Boolean = false, landscape: Boolean = false): List<List<Key>> {
         val extra = parseExtras(Settings.str("long_press_extra"))
         val fa = lang == "fa"
         val rows: MutableList<List<Key>>
@@ -83,7 +83,7 @@ object Layouts {
                 rows = parseRows(Settings.str(if (fa) "layout_fa" else "layout_en").ifBlank { def }, extra)
                 val numText = Settings.str("layout_numrow").ifBlank { "1 2 3 4 5 6 7 8 9 0" }
                 val digits = numText.split(Regex("\\s+")).map { if (fa && Settings.bool("fa_digits")) persianDigits(it) else it }
-                if (Settings.bool("number_row")) {
+                if (Settings.bool("number_row") && (!landscape || Settings.bool("number_row_land"))) {
                     val maxW = maxOf(10f, rows.maxOfOrNull { r -> r.sumOf { it.weight.toDouble() }.toFloat() } ?: 10f)
                     rows.add(0, digits.map { d -> Key(d, d, emptyList(), maxW / digits.size, false).also { it.hScale = 0.8f } })
                 } else if (rows.isNotEmpty()) {

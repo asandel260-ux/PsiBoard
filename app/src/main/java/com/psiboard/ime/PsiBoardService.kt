@@ -128,7 +128,7 @@ class PsiBoardService : InputMethodService(), KbListener, SharedPreferences.OnSh
         val langs = enabledLangs()
         if (lang !in langs) lang = langs[0]
         kb.lang = lang
-        kb.submitRows(Layouts.build(lang, page, langs.size > 1, kb.enterLabel != null && !Settings.bool("enter_icons")), page == 0)
+        kb.submitRows(Layouts.build(lang, page, langs.size > 1, kb.enterLabel != null && !Settings.bool("enter_icons"), kb.isLandscape), page == 0)
         kb.spaceLabel = if (lang == "fa") "فارسی" else "English"
         kb.symLabel = if (lang == "fa") "۱۲۳" else "?123"; kb.abcLabel = if (lang == "fa") "ابج" else "ABC"
     }

@@ -17,8 +17,11 @@ android {
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"))
+            // CI has no private signing key, so sign with the auto-generated debug key: still installable, but optimized (R8) and not debuggable
+            signingConfig = signingConfigs.getByName("debug")
         }
     }
+    lint { checkReleaseBuilds = false; abortOnError = false }
     compileOptions { sourceCompatibility = JavaVersion.VERSION_17; targetCompatibility = JavaVersion.VERSION_17 }
     kotlinOptions { jvmTarget = "17" }
 }

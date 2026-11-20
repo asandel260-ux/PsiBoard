@@ -18,3 +18,5 @@ SCROLL=1 TAP=0 shoot settings_theme --es psi_kv theme_mode=light
 TAPS="124,1213 300,1213 359,1213 536,1213" shoot fa_typing --es psi_kv default_lang=fa,theme_mode=dark
 ROTATE=1 shoot en_land --es psi_kv default_lang=en,theme_mode=dark
 ROTATE=1 shoot fa_land --es psi_kv default_lang=fa,theme_mode=light
+ROTATE=1 shoot en_land_num --es psi_kv default_lang=en,theme_mode=dark,number_row_land=true
+ROTATE=1 TAP=0 shoot settings_land --es psi_kv theme_mode=light
