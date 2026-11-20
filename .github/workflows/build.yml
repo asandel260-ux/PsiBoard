@@ -18,8 +18,9 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with: { gradle-version: '8.9' }
       - run: bash .github/scripts/fetch_font.sh
-      - run: gradle assembleDebug --stacktrace
-      - run: cp app/build/outputs/apk/debug/app-debug.apk PsiBoard.apk
+      - run: bash .github/scripts/fetch_dicts.sh
+      - run: gradle assembleRelease --stacktrace
+      - run: cp app/build/outputs/apk/release/app-release.apk PsiBoard.apk
       - uses: actions/upload-artifact@v4
         with: { name: PsiBoard-apk, path: PsiBoard.apk }
       - id: ver
@@ -35,10 +36,12 @@ jobs:
             **Install:** download `PsiBoard.apk` below and open it (allow "install unknown apps" if Android asks). Then open PsiBoard and follow the two setup steps: enable it, then select it as your keyboard.
             If Android refuses to install over an older PsiBoard, uninstall the old one first (each build is signed with a fresh debug key).
 
-            **0.4.0 - redesign**
-            - Theme engine based on OKLCH color science: light / dark / AMOLED / Material You, key labels kept at 9:1 contrast or better
-            - 48 dp row pitch, touch-point correction, key hit areas with no dead gaps
-            - Persian: Vazirmatn font, aligned rows, half-space (ZWNJ) key, ژ on long-press of ز
-            - Key preview bubbles and long-press popups, press animation, icons on the Enter key
-            - New settings screen with a live keyboard preview
+            **0.4.1**
+            - Optimized (R8-shrunk) build: about 0.4 MB, not debuggable
+            - Real English and Persian word lists, so suggestions and autocorrect have far more to work with
+            - Landscape: shorter rows, number row off by default (new setting to bring it back)
+            - Symbols page keeps the same keyboard height as the letters page
+            - Clipboard and emoji panels get pill-style headers; long-press popups have shadows; lighter drawing while typing
+            - Settings: visible slider tracks, preview follows the screen orientation
 
+            Design notes and credits are in the README.

@@ -6,7 +6,8 @@ import java.io.File
 /**
  * Tiny prediction engine: sorted word array + binary search (no trie objects -> low memory).
  * Dictionary files (assets/dict_<lang>.txt) list one word per line, most frequent first.
- * Drop a bigger list in to improve quality; nothing else changes.
+ * CI swaps in bigger lists at build time (.github/scripts/fetch_dicts.sh); nothing else changes.
+ * Lists load on a background thread when the keyboard starts, so the first key press never waits for disk.
  */
 class Suggester(private val ctx: Context) {
     private class Dict(val words: Array<String>, val rank: IntArray)
@@ -18,10 +19,21 @@ class Suggester(private val ctx: Context) {
 
     init { loadUser() }
 
-    private fun dict(lang: String): Dict = dicts.getOrPut(lang) {
-        val list = try { ctx.assets.open("dict_$lang.txt").bufferedReader().readLines().map { it.trim() }.filter { it.isNotEmpty() } } catch (_: Exception) { emptyList() }
+    /** Load the enabled languages' word lists off the main thread (called once by the keyboard service). */
+    fun preload() {
+        Thread {
+            try { for (l in Settings.langs) if (Settings.bool("lang_$l")) dict(l) } catch (_: Throwable) {}
+        }.apply { priority = Thread.MIN_PRIORITY; isDaemon = true; start() }
+    }
+
+    private fun dict(lang: String): Dict = synchronized(dicts) { dicts.getOrPut(lang) { load(lang) } }
+
+    private fun load(lang: String): Dict {
+        val list = try {
+            ctx.assets.open("dict_$lang.txt").bufferedReader().use { r -> r.readLines().map { it.trim() }.filter { it.isNotEmpty() } }
+        } catch (_: Exception) { emptyList() }
         val idx = list.indices.sortedBy { list[it] }
-        Dict(Array(idx.size) { list[idx[it]] }, IntArray(idx.size) { idx[it] })
+        return Dict(Array(idx.size) { list[idx[it]] }, IntArray(idx.size) { idx[it] })
     }
 
     private fun lower(bound: Array<String>, p: String): Int {
@@ -43,10 +55,21 @@ class Suggester(private val ctx: Context) {
             if (prev != null && Settings.bool("next_word")) bigram[prev.lowercase()]?.forEach { (k, v) -> cands[k] = 1000f + v }
         } else {
             val d = dict(lang)
-            var i = lower(d.words, w); var seen = 0
-            while (i < d.words.size && d.words[i].startsWith(w) && seen < 400) {
-                cands[d.words[i]] = 500f - d.rank[i] * 0.5f - (d.words[i].length - w.length); i++; seen++
+            // every word that starts with the typed prefix is one contiguous block of the sorted array; keep the best few
+            val top = 12
+            val bw = arrayOfNulls<String>(top); val bs = FloatArray(top) { Float.NEGATIVE_INFINITY }
+            var i = lower(d.words, w)
+            while (i < d.words.size && d.words[i].startsWith(w)) {
+                val c = d.words[i]
+                val sc = 500f - d.rank[i] * 0.5f - (c.length - w.length)
+                if (sc > bs[top - 1]) {
+                    var j = top - 1
+                    while (j > 0 && bs[j - 1] < sc) { bs[j] = bs[j - 1]; bw[j] = bw[j - 1]; j-- }
+                    bs[j] = sc; bw[j] = c
+                }
+                i++
             }
+            for (j in 0 until top) { val c = bw[j] ?: break; cands[c] = bs[j] }
             for ((k, v) in user) if (k.startsWith(w) && k != w) cands[k] = (cands[k] ?: 0f) + 600f + v
             if (prev != null) bigram[prev.lowercase()]?.forEach { (k, v) -> if (k.startsWith(w)) cands[k] = (cands[k] ?: 0f) + 300f + v }
         }

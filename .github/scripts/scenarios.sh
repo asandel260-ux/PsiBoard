@@ -20,3 +20,5 @@ ROTATE=1 shoot en_land --es psi_kv default_lang=en,theme_mode=dark
 ROTATE=1 shoot fa_land --es psi_kv default_lang=fa,theme_mode=light
 ROTATE=1 shoot en_land_num --es psi_kv default_lang=en,theme_mode=dark,number_row_land=true
 ROTATE=1 TAP=0 shoot settings_land --es psi_kv theme_mode=light
+TYPE=sch shoot en_suggest --es psi_kv default_lang=en,theme_mode=light
+TAPS="522,1213 413,1308 304,1308" shoot fa_suggest --es psi_kv default_lang=fa,theme_mode=light

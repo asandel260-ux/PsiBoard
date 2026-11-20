@@ -48,7 +48,7 @@ class PsiBoardService : InputMethodService(), KbListener, SharedPreferences.OnSh
         super.onCreate()
         Settings.init(this)
         store = ClipboardStore(this)
-        suggester = Suggester(this)
+        suggester = Suggester(this).also { it.preload() }
         cm = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
         lang = Settings.str("default_lang")
         // elapsedRealtime resets to ~0 on reboot, so a smaller value than last seen means the phone rebooted

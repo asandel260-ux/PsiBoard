@@ -95,7 +95,7 @@ class SettingsActivity : Activity(), SharedPreferences.OnSharedPreferenceChangeL
         page.addView(head)
         val scrollBody = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(14), 0, dp(14), dp(24)) }
         // live preview card
-        preview = KeyboardView(this).also { it.shift = 0 }
+        preview = KeyboardView(this).also { it.shift = 0; it.isLandscape = resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE }
         val pv = FrameLayout(this).apply {
             addView(preview, FrameLayout.LayoutParams(-1, -2))
             clipToOutline = true
@@ -188,7 +188,7 @@ class SettingsActivity : Activity(), SharedPreferences.OnSharedPreferenceChangeL
         preview.lang = lang
         preview.spaceLabel = if (lang == "fa") "فارسی" else "English"
         preview.symLabel = if (lang == "fa") "۱۲۳" else "?123"
-        preview.submitRows(Layouts.build(lang, 0, false))
+        preview.submitRows(Layouts.build(lang, 0, false, false, preview.isLandscape))
     }
 
     /** After a theme change: recompute the settings chrome so it matches the new palette. */

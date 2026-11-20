@@ -5,7 +5,7 @@ dest=app/src/main/assets/fonts
 mkdir -p "$dest" /tmp/vz
 if gh release download -R rastikerdar/vazirmatn --pattern '*.zip' -D /tmp/vz 2>/tmp/vz/err; then
   (cd /tmp/vz && unzip -q -o ./*.zip 2>/dev/null || true)
-  for w in Regular Medium; do
+  for w in Medium; do
     f=$(find /tmp/vz -name "Vazirmatn-UI-$w.ttf" | head -1)
     [ -z "$f" ] && f=$(find /tmp/vz -path '*ttf*' -name "Vazirmatn-$w.ttf" | head -1)
     [ -n "$f" ] && cp "$f" "$dest/Vazirmatn-$w.ttf"
